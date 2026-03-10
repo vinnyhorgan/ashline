@@ -344,7 +344,7 @@ function Terminal:render()
         love.graphics.setColor(colors.bg)
         love.graphics.rectangle("fill", x0, ind_y, self.width - MARGIN_X * 2, self.char_h)
         love.graphics.setColor(colors.amber)
-        local indicator = string.format("▼ %d more lines below ▼  (Page Down / Scroll)", self.scroll_offset)
+        local indicator = string.format("v %d more lines below v  (Page Down / Scroll)", self.scroll_offset)
         love.graphics.print(indicator, self.font, x0, ind_y)
     end
 

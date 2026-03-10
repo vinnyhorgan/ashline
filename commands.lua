@@ -82,7 +82,7 @@ end
 local function format_record_content(record)
     local lines = {}
     for _, text in ipairs(record.content) do
-        if text:find("^%s*▸") or text:find("WARNING") or text:find("ALERT") then
+        if text:find("^%s*>") or text:find("WARNING") or text:find("ALERT") then
             table.insert(lines, {seg("  " .. text, colors.amber)})
         elseif text:find("^%s*NOTE") or text:find("^%s*OBSERVATION") or text:find("ADDITIONAL NOTE") then
             table.insert(lines, {seg("  " .. text, colors.cyan)})
@@ -172,7 +172,7 @@ function handlers.STATUS(game, args)
         elseif sys.status == "CRITICAL" then status_color = colors.red end
 
         table.insert(out, {
-            seg("  ▸ ", colors.dim),
+            seg("  > ", colors.dim),
             seg(string.format("%-34s", sys.name), colors.text),
             seg("[", colors.dim),
             seg(sys.status, status_color),
@@ -270,7 +270,7 @@ function handlers.READ(game, args)
         for _, text in ipairs(msg.content) do
             if text == "" then
                 table.insert(out, blank())
-            elseif text:find("^%s*▸") then
+            elseif text:find("^%s*>") then
                 table.insert(out, {seg("  " .. text, colors.amber)})
             elseif text:find("ACCESS CODE") then
                 table.insert(out, {seg("  " .. text, colors.classified)})
@@ -408,7 +408,7 @@ function handlers.LIST(game, args)
 
     for _, r in ipairs(records) do
         local access_ok = game:canAccessRecord(r.id)
-        local read_marker = game.records_read[r.id] and "  " or "● "
+        local read_marker = game.records_read[r.id] and "  " or "* "
         if access_ok then
             table.insert(out, {
                 seg("  " .. read_marker, game.records_read[r.id] and colors.dim or colors.cyan),
@@ -425,7 +425,7 @@ function handlers.LIST(game, args)
     end
 
     table.insert(out, blank())
-    table.insert(out, dim_line("  ● = unread  |  Use READ <id> to view a record"))
+    table.insert(out, dim_line("  * = unread  |  Use READ <id> to view a record"))
     table.insert(out, separator())
     return out
 end
@@ -473,7 +473,7 @@ function handlers.PERSONNEL(game, args)
     table.insert(out, separator())
     table.insert(out, blank())
     for _, note in ipairs(person.notes) do
-        table.insert(out, {seg("  ▸ " .. note, colors.text)})
+        table.insert(out, {seg("  > " .. note, colors.text)})
     end
     table.insert(out, blank())
     table.insert(out, separator())
@@ -591,7 +591,7 @@ function handlers.INSPECT(game, args)
     for _, text in ipairs(sys.details) do
         if text == "" then
             table.insert(out, blank())
-        elseif text:find("▸") or text:find("ALERT") or text:find("WARNING") then
+        elseif text:find(">") or text:find("ALERT") or text:find("WARNING") then
             table.insert(out, {seg("  " .. text, colors.amber)})
         else
             table.insert(out, {seg("  " .. text, colors.text)})
@@ -696,7 +696,7 @@ function handlers.INBOX(game, args)
     else
         for i, entry in ipairs(game.inbox) do
             local msg = entry.message
-            local marker = entry.read and "  " or "● "
+            local marker = entry.read and "  " or "* "
             local pri_color = colors.text
             if msg.priority == "PRIORITY-1" or msg.priority == "URGENT" then pri_color = colors.red
             elseif msg.priority == "PRIORITY-2" then pri_color = colors.amber end
@@ -716,7 +716,7 @@ function handlers.INBOX(game, args)
     end
 
     table.insert(out, blank())
-    table.insert(out, dim_line("  ● = unread  |  Use READ MSG <number> to read"))
+    table.insert(out, dim_line("  * = unread  |  Use READ MSG <number> to read"))
     table.insert(out, separator())
     return out
 end

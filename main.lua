@@ -244,6 +244,12 @@ function love.update(dt)
 end
 
 function love.draw()
+    -- sync dimensions every frame for robust resize handling
+    local w, h = love.graphics.getDimensions()
+    if w ~= terminal.width or h ~= terminal.height then
+        terminal:resize(w, h)
+        effect.resize(w, h)
+    end
     effect(function()
         terminal:render()
     end)

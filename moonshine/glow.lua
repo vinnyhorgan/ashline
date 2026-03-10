@@ -59,8 +59,17 @@ return function(moonshine)
   end
 
   local scene = love.graphics.newCanvas()
+  local scene_w, scene_h = love.graphics.getDimensions()
   local draw = function(buffer)
     local front, back = buffer() -- scene so far is in `back'
+
+    -- recreate scene canvas if window size changed
+    local w, h = love.graphics.getDimensions()
+    if w ~= scene_w or h ~= scene_h then
+      scene = love.graphics.newCanvas(w, h)
+      scene_w, scene_h = w, h
+    end
+
     scene, back = back, scene    -- save it for second draw below
 
     -- 1st pass: draw scene with brightness threshold
