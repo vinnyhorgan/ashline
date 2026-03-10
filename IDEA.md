@@ -494,18 +494,7 @@ The look should feel like:
 The interface should be built around a monospace face that is readable for long sessions and still carries tone.
 
 Recommended base font:
-- **JetBrains Mono**
-
-Strong alternative:
 - **IBM Plex Mono**
-
-Optional more niche alternative:
-- **Iosevka**
-
-Selection logic:
-- use **JetBrains Mono** for readability-first development
-- test **IBM Plex Mono** if the game leans more bureaucratic, severe, or archival
-- use **Iosevka** only if a sharper, denser, more technical identity is desired
 
 ---
 
