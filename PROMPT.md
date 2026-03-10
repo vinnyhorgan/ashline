@@ -18,3 +18,5 @@ so this is all that is currently present in this repository. i want to try and s
 think of everything, nothing should just go overlooked. you are tasked with creating a full demo that is super interesting and can sell the idea: ~10+ minutes of gameplay at least. i think you have all the info you need!
 
 i added one last thing: some sound pack i found on the internet that should be related to our theme. i know you can't listen to the sounds, but try and figure out what the sound is based on the length of the file and the filename! they are here: 'term_ui_sounds'.
+
+one last thing: remember you have access to the context7 mcp server for any documentation you may need, don't hesistate to use it!
