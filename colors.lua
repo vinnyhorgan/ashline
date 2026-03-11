@@ -15,6 +15,8 @@ local colors = {
     classified = {0.95, 0.35, 0.15, 1},
     highlight  = {0.65, 1.0, 0.65, 1},
     ghost      = {0.18, 0.32, 0.18, 1},
+    soft_cyan  = {0.28, 0.62, 0.62, 1},
+    warm_dim   = {0.22, 0.38, 0.22, 1},
 }
 
 return colors

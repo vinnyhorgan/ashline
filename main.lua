@@ -440,55 +440,151 @@ local function drawBackground(w, h)
 
     local t = love.timer.getTime()
     love.graphics.setLineWidth(1)
-    love.graphics.setColor(colors.very_dim[1], colors.very_dim[2], colors.very_dim[3], 0.55)
 
-    love.graphics.rectangle("fill", 64, 56, 4, h - 112)
-    love.graphics.rectangle("fill", w - 68, 56, 4, h - 112)
-
-    for i = 0, 15 do
-        local y = 92 + i * 34
-        local wobble = math.sin(t * 0.45 + i * 0.7) * 22
-        love.graphics.line(0, y, w * 0.76 + wobble, y)
+    -- Subtle dot grid
+    love.graphics.setColor(colors.very_dim[1], colors.very_dim[2], colors.very_dim[3], 0.15)
+    for gx = 96, w - 96, 48 do
+        for gy = 96, h - 96, 48 do
+            love.graphics.circle("fill", gx, gy, 1)
+        end
     end
 
-    love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.22)
+    -- Animated horizontal scan lines
+    for i = 0, 17 do
+        local y = 86 + i * 38
+        local wobble = math.sin(t * 0.35 + i * 0.8) * 18
+        local a = 0.12 + 0.08 * math.sin(t * 0.6 + i * 1.1)
+        love.graphics.setColor(colors.very_dim[1], colors.very_dim[2], colors.very_dim[3], a)
+        love.graphics.line(78, y, w * 0.72 + wobble, y)
+    end
+
+    -- Vertical grid lines
+    love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.10)
     for x = 96, w - 96, 96 do
         love.graphics.line(x, 64, x, h - 64)
     end
 
-    love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.35)
+    -- Outer frame
+    love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.45)
     love.graphics.rectangle("line", 52, 52, w - 104, h - 104)
+
+    -- Inner frame
+    love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.15)
     love.graphics.rectangle("line", 78, 78, w - 156, h - 156)
+
+    -- Corner brackets
+    local cl = 30
+    love.graphics.setLineWidth(2)
+    love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.5)
+    love.graphics.line(40, 40, 40 + cl, 40)
+    love.graphics.line(40, 40, 40, 40 + cl)
+    love.graphics.line(w - 40, 40, w - 40 - cl, 40)
+    love.graphics.line(w - 40, 40, w - 40, 40 + cl)
+    love.graphics.line(40, h - 40, 40 + cl, h - 40)
+    love.graphics.line(40, h - 40, 40, h - 40 - cl)
+    love.graphics.line(w - 40, h - 40, w - 40 - cl, h - 40)
+    love.graphics.line(w - 40, h - 40, w - 40, h - 40 - cl)
+    love.graphics.setLineWidth(1)
+
+    -- Vertical accent strips
+    love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.06)
+    love.graphics.rectangle("fill", 63, 52, 3, h - 104)
+    love.graphics.rectangle("fill", w - 66, 52, 3, h - 104)
+
+    -- Status indicator dots
+    love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.35 + 0.25 * math.sin(t * 3.0))
+    love.graphics.circle("fill", 72, 60, 3)
+    love.graphics.setColor(colors.header[1], colors.header[2], colors.header[3], 0.35 + 0.2 * math.sin(t * 2.2 + 1.0))
+    love.graphics.circle("fill", 84, 60, 3)
+    love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.35 + 0.2 * math.sin(t * 2.7 + 2.0))
+    love.graphics.circle("fill", w - 72, 60, 3)
+
+    -- Scrolling hex in left margin
+    love.graphics.setFont(font)
+    local hex = "0123456789ABCDEF"
+    for i = 0, 13 do
+        local y = 100 + i * 44
+        local idx = (math.floor(t * 2.0 + i * 3.7) % 16) + 1
+        local ch = hex:sub(idx, idx)
+        local a2 = 0.08 + 0.05 * math.sin(t * 1.8 + i * 2.3)
+        love.graphics.setColor(colors.dim[1], colors.dim[2], colors.dim[3], a2)
+        love.graphics.print(ch, 58, y)
+    end
+
+    -- Right margin data
+    for i = 0, 13 do
+        local y = 100 + i * 44
+        local idx = (math.floor(t * 1.3 + i * 5.1) % 16) + 1
+        local ch = hex:sub(idx, idx)
+        local a2 = 0.06 + 0.04 * math.sin(t * 2.1 + i * 1.7)
+        love.graphics.setColor(colors.dim[1], colors.dim[2], colors.dim[3], a2)
+        love.graphics.print(ch, w - 78, y)
+    end
 end
 
 local function drawBox(x, y, w, h)
+    love.graphics.setColor(colors.very_dim[1], colors.very_dim[2], colors.very_dim[3], 0.35)
+    love.graphics.rectangle("fill", x + 1, y + 1, w - 2, h - 2)
     love.graphics.setColor(colors.border)
     love.graphics.rectangle("line", x, y, w, h)
-    love.graphics.setColor(colors.very_dim[1], colors.very_dim[2], colors.very_dim[3], 0.4)
-    love.graphics.rectangle("fill", x + 1, y + 1, w - 2, h - 2)
+
+    -- Corner tick marks
+    local tick = 8
+    love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.45)
+    love.graphics.line(x, y, x + tick, y)
+    love.graphics.line(x, y, x, y + tick)
+    love.graphics.line(x + w, y, x + w - tick, y)
+    love.graphics.line(x + w, y, x + w, y + tick)
+    love.graphics.line(x, y + h, x + tick, y + h)
+    love.graphics.line(x, y + h, x, y + h - tick)
+    love.graphics.line(x + w, y + h, x + w - tick, y + h)
+    love.graphics.line(x + w, y + h, x + w, y + h - tick)
 end
 
 local function drawPanel(x, y, w, h, title, accent)
     drawBox(x, y, w, h)
-    love.graphics.setColor(colors.very_dim[1], colors.very_dim[2], colors.very_dim[3], 0.7)
-    love.graphics.rectangle("fill", x + 1, y + 1, w - 2, 38)
+
+    -- Header bar
+    love.graphics.setColor(colors.very_dim[1], colors.very_dim[2], colors.very_dim[3], 0.6)
+    love.graphics.rectangle("fill", x + 1, y + 1, w - 2, 36)
+
+    -- Accent stripe on left edge of header
     love.graphics.setColor(accent or colors.header)
+    love.graphics.rectangle("fill", x + 1, y + 1, 3, 36)
+
+    -- Title text
     love.graphics.setFont(font_bold)
-    love.graphics.print(title, x + 18, y + 12)
+    love.graphics.print(title, x + 18, y + 10)
+
+    -- Separator under header
     love.graphics.setColor(colors.border)
-    love.graphics.rectangle("fill", x + 18, y + 38, w - 36, 1)
+    love.graphics.rectangle("fill", x + 1, y + 37, w - 2, 1)
+
+    -- Soft glow under header
+    local ac = accent or colors.header
+    love.graphics.setColor(ac[1], ac[2], ac[3], 0.04)
+    love.graphics.rectangle("fill", x + 1, y + 38, w - 2, 18)
 end
 
 local function drawMenuOption(x, y, w, label, selected)
+    local t = love.timer.getTime()
     if selected then
-        love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.12)
-        love.graphics.rectangle("fill", x, y - 4, w, 28)
+        local pulse = 0.10 + 0.04 * math.sin(t * 3.0)
+        love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], pulse)
+        love.graphics.rectangle("fill", x, y - 6, w, 32)
+
         love.graphics.setColor(colors.cyan)
-        love.graphics.rectangle("fill", x, y - 4, 3, 28)
+        love.graphics.rectangle("fill", x, y - 6, 3, 32)
+
+        love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.25)
+        love.graphics.rectangle("fill", x + w - 2, y - 6, 2, 32)
+
+        love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.12)
+        love.graphics.rectangle("fill", x + 3, y + 26, w - 5, 1)
     end
 
     love.graphics.setColor(selected and colors.bright or colors.text)
-    love.graphics.print((selected and "> " or "  ") .. label, x + 16, y)
+    love.graphics.print((selected and "> " or "  ") .. label, x + 14, y)
 end
 
 local function getTitleOptionMeta(option)
@@ -522,99 +618,210 @@ end
 local function drawTitleScreen(w, h)
     drawBackground(w, h)
 
+    local t = love.timer.getTime()
     local left = 112
-    local top = 74
+    local top = 76
     local title_options = getTitleOptions()
     local selected_option = title_options[math.max(1, math.min(title_index, #title_options))]
     local selected_meta = getTitleOptionMeta(selected_option)
-    local pulse = 0.16 + 0.08 * (0.5 + 0.5 * math.sin(love.timer.getTime() * 2.4))
 
-    love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.12)
-    love.graphics.rectangle("fill", 96, 64, 4, h - 128)
-    love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.4)
-    love.graphics.rectangle("fill", 96, 226, 392, 1)
+    -- ══════ HEADER AREA ══════
 
-    love.graphics.setFont(font_title)
-    love.graphics.setColor(colors.bright)
-    love.graphics.print("ASHLINE", left, top)
-
+    -- Subtitle
     love.graphics.setFont(font_bold)
     love.graphics.setColor(colors.cyan)
-    love.graphics.print("MERIDIAN INTERNAL SYSTEM / NIGHT SHIFT", left + 4, top - 20)
+    love.graphics.print("MERIDIAN INTERNAL SYSTEM / NIGHT SHIFT", left + 4, top - 18)
 
+    -- Title with glitch effect
+    love.graphics.setFont(font_title)
+    local title_text = "ASHLINE"
+    local glitch_cycle = 4.2
+    local glitch_phase = t % glitch_cycle
+    if glitch_phase < 0.1 then
+        local glitch_chars = "!@#$%&*<>{}|/~+="
+        local pos = (math.floor(t * 17.3) % #title_text) + 1
+        local chars = {}
+        for ci = 1, #title_text do
+            if ci == pos then
+                local gi = (math.floor(t * 53.7) % #glitch_chars) + 1
+                chars[ci] = glitch_chars:sub(gi, gi)
+            else
+                chars[ci] = title_text:sub(ci, ci)
+            end
+        end
+        title_text = table.concat(chars)
+    end
+
+    -- Title glow (offset copies)
+    love.graphics.setColor(colors.bright[1], colors.bright[2], colors.bright[3], 0.12)
+    love.graphics.print(title_text, left + 2, top + 2)
+    love.graphics.print(title_text, left - 1, top)
+    -- Main title
+    love.graphics.setColor(colors.bright)
+    love.graphics.print(title_text, left, top + 1)
+
+    -- Description
     love.graphics.setFont(font)
     love.graphics.setColor(colors.dim)
-    love.graphics.print("A terminal investigation about hidden people, buried doctrine,", left + 4, top + 62)
+    love.graphics.print("A terminal investigation about hidden people, buried doctrine,", left + 4, top + 66)
     love.graphics.print("and the price of truth.", left + 4, top + 88)
-    love.graphics.print("Meridian survives by omission.", left + 4, top + 126)
+
+    love.graphics.setColor(colors.very_dim)
+    love.graphics.print("Meridian survives by omission.", left + 4, top + 118)
+
     love.graphics.setColor(colors.cyan)
-    love.graphics.print("Night shift access point / operator handoff required", left + 4, top + 164)
+    love.graphics.print("Night shift access point / operator handoff required", left + 4, top + 148)
+
+    -- Decorated separator
+    love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.5)
+    love.graphics.rectangle("fill", left, top + 178, 440, 1)
+    love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.2)
+    love.graphics.rectangle("fill", left, top + 179, 280, 1)
+
+    -- Signal status (top right)
+    love.graphics.setFont(font)
+    love.graphics.setColor(colors.dim)
+    love.graphics.print("SIGNAL LOCKED", w - 248, top - 18)
+    local blink = math.sin(t * 4) > 0 and 0.8 or 0.2
+    love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], blink)
+    love.graphics.circle("fill", w - 262, top - 11, 4)
+
+    -- Live clock
+    love.graphics.setColor(colors.very_dim)
+    love.graphics.print(os.date("%H:%M:%S"), w - 248, top)
+
+    -- ══════ MENU PANEL ══════
 
     local menu_x = 112
-    local menu_y = 278
-    local menu_w = 334
-    local menu_h = 58 + (#title_options * 44)
+    local menu_y = top + 200
+    local menu_w = 340
+    local item_spacing = 40
+    local menu_pad = 18
+    local menu_header = 38
+    local menu_h = menu_header + menu_pad + (#title_options * item_spacing) + menu_pad
     drawPanel(menu_x, menu_y, menu_w, menu_h, "TERMINAL ACCESS", colors.header)
 
     love.graphics.setFont(font)
     if title_index > #title_options then title_index = #title_options end
     for i, option in ipairs(title_options) do
-        drawMenuOption(menu_x + 14, menu_y + 44 + (i - 1) * 44, menu_w - 28, option, i == title_index)
+        local iy = menu_y + menu_header + menu_pad + (i - 1) * item_spacing + 4
+        drawMenuOption(menu_x + 12, iy, menu_w - 24, option, i == title_index)
     end
 
-    local right_x = 494
-    local right_y = 278
-    local right_w = 664
-    local right_h = 214
+    -- ══════ DOSSIER PANEL ══════
+
+    local right_x = menu_x + menu_w + 24
+    local right_y = menu_y
+    local right_w = w - right_x - 88
+    local right_h = math.max(menu_h, 340)
     drawPanel(right_x, right_y, right_w, right_h, "SELECTION DOSSIER", colors.amber)
 
+    local ry = right_y + 50
+
+    -- Route code and target
     love.graphics.setFont(font)
     love.graphics.setColor(colors.amber)
-    love.graphics.print(selected_meta.code, right_x + 18, right_y + 44)
+    love.graphics.print(selected_meta.code, right_x + 20, ry)
     love.graphics.setColor(colors.cyan)
-    love.graphics.print("TARGET: " .. selected_option, right_x + 132, right_y + 44)
+    love.graphics.print("TARGET: " .. selected_option, right_x + 122, ry)
+    ry = ry + 30
 
+    -- Big title
     love.graphics.setFont(font_large)
     love.graphics.setColor(colors.bright)
-    love.graphics.print(selected_meta.title, right_x + 18, right_y + 74)
+    love.graphics.print(selected_meta.title, right_x + 20, ry)
+    ry = ry + 38
 
+    -- Body
     love.graphics.setFont(font)
     love.graphics.setColor(colors.text)
-    love.graphics.printf(selected_meta.body, right_x + 18, right_y + 118, 330)
+    love.graphics.printf(selected_meta.body, right_x + 20, ry, right_w - 40)
+    ry = ry + 48
 
+    -- Pulsing separator
+    local pulse = 0.18 + 0.08 * (0.5 + 0.5 * math.sin(t * 2.4))
     love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], pulse)
-    love.graphics.rectangle("fill", right_x + 18, right_y + 152, 330, 2)
+    love.graphics.rectangle("fill", right_x + 20, ry, right_w - 40, 1)
+    ry = ry + 14
 
-    love.graphics.setColor(colors.text)
-    love.graphics.print("Length: ~2 hours", right_x + 404, right_y + 78)
-    love.graphics.print("Keyboard only", right_x + 404, right_y + 104)
-    love.graphics.print("Alt+Enter fullscreen", right_x + 404, right_y + 130)
-
-    love.graphics.setColor(colors.dim)
-    love.graphics.print("Read closely.", right_x + 404, right_y + 168)
-    love.graphics.print("Compare often.", right_x + 404, right_y + 194)
-
-    local meta = Save.getMetadata()
-    love.graphics.setColor(colors.border)
-    love.graphics.rectangle("fill", right_x + 18, right_y + 176, right_w - 36, 1)
+    -- Runtime info
     love.graphics.setFont(font_bold)
-    love.graphics.setColor(colors.header)
-    love.graphics.print("SESSION", right_x + 18, right_y + 188)
-    if meta then
-        love.graphics.setColor(colors.cyan)
-        love.graphics.print("AUTOSAVE DETECTED", right_x + 110, right_y + 188)
-        love.graphics.setColor(colors.text)
-        love.graphics.print(tostring(meta.saved_at or "UNKNOWN"), right_x + 18, right_y + 212)
-        love.graphics.print("CHAPTER " .. tostring(meta.chapter or "UNKNOWN"), right_x + 390, right_y + 212)
-    else
+    love.graphics.setColor(colors.text)
+    love.graphics.print("RUNTIME", right_x + 20, ry)
+    ry = ry + 26
+    love.graphics.setFont(font)
+
+    local info_items = {
+        {"Length",  "~2 hours"},
+        {"Input",   "Keyboard only"},
+        {"Display", "Alt+Enter fullscreen"},
+    }
+    for _, item in ipairs(info_items) do
         love.graphics.setColor(colors.dim)
-        love.graphics.print("No autosave present. Starting a new session will create one.", right_x + 110, right_y + 200)
+        love.graphics.print(item[1], right_x + 20, ry)
+        love.graphics.setColor(colors.dim[1], colors.dim[2], colors.dim[3], 0.5)
+        love.graphics.print(("."):rep(10), right_x + 106, ry)
+        love.graphics.setColor(colors.bright)
+        love.graphics.print(item[2], right_x + 196, ry)
+        ry = ry + 22
     end
 
+    -- Flavor text (bottom-right corner of dossier)
     love.graphics.setColor(colors.dim)
-    love.graphics.print("Up/Down navigate  Enter select  Escape quit", left + 4, h - 42)
+    love.graphics.print("Read closely.", right_x + right_w - 160, right_y + right_h - 56)
+    love.graphics.print("Compare often.", right_x + right_w - 160, right_y + right_h - 36)
+
+    -- Session info section
+    love.graphics.setColor(colors.border)
+    love.graphics.rectangle("fill", right_x + 20, right_y + right_h - 68, right_w - 40, 1)
+    love.graphics.setFont(font_bold)
+    love.graphics.setColor(colors.header)
+    love.graphics.print("SESSION", right_x + 20, right_y + right_h - 54)
+
+    local meta = Save.getMetadata()
+    if meta then
+        love.graphics.setColor(colors.cyan)
+        love.graphics.print("AUTOSAVE DETECTED", right_x + 112, right_y + right_h - 54)
+        love.graphics.setFont(font)
+        love.graphics.setColor(colors.text)
+        love.graphics.print(tostring(meta.saved_at or "UNKNOWN"), right_x + 20, right_y + right_h - 30)
+        love.graphics.setColor(colors.dim)
+        love.graphics.print("CHAPTER " .. tostring(meta.chapter or "UNKNOWN"), right_x + 340, right_y + right_h - 30)
+    else
+        love.graphics.setFont(font)
+        love.graphics.setColor(colors.dim)
+        love.graphics.print("No autosave present.", right_x + 112, right_y + right_h - 54)
+    end
+
+    -- ══════ ATMOSPHERIC DETAILS ══════
+
+    -- Clearance bar (between panels and footer)
+    local atm_y = math.max(menu_y + menu_h, right_y + right_h) + 20
+    love.graphics.setFont(font)
+    love.graphics.setColor(colors.very_dim)
+    love.graphics.print("CLEARANCE: NIGHT OPERATOR", left + 4, atm_y)
+    love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.3)
+    love.graphics.rectangle("fill", left + 280, atm_y + 8, w - left - 280 - 88, 1)
+    love.graphics.setColor(colors.very_dim)
+    love.graphics.print("ARCHIVE STATUS: SEALED", w - 310, atm_y)
+
+    -- ══════ FOOTER ══════
+
+    -- Footer separator
+    love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.35)
+    love.graphics.rectangle("fill", 78, h - 58, w - 156, 1)
+
+    love.graphics.setFont(font)
+    love.graphics.setColor(colors.dim)
+    love.graphics.print("Up/Down navigate", left + 4, h - 42)
+    love.graphics.setColor(colors.very_dim)
+    love.graphics.print("Enter select", left + 200, h - 42)
+    love.graphics.setColor(colors.very_dim)
+    love.graphics.print("Escape quit", left + 350, h - 42)
+
     love.graphics.setColor(colors.cyan)
     love.graphics.print("made with <3 by vinny", w - 252, h - 42)
+
     if save_notice_timer > 0 and #save_notice > 0 then
         love.graphics.setColor(colors.amber)
         love.graphics.print(save_notice, left + 4, h - 68)
