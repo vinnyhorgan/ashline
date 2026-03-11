@@ -491,12 +491,48 @@ local function drawMenuOption(x, y, w, label, selected)
     love.graphics.print((selected and "> " or "  ") .. label, x + 16, y)
 end
 
+local function getTitleOptionMeta(option)
+    if option == "CONTINUE SESSION" then
+        return {
+            code = "ROUTE-01",
+            title = "Resume recovered session",
+            body = "Restore the last validated autosave and return to the active terminal.",
+        }
+    elseif option == "NEW SESSION" then
+        return {
+            code = "ROUTE-02",
+            title = "Initialize fresh terminal",
+            body = "Start from boot and overwrite the current autosave slot.",
+        }
+    elseif option == "SETTINGS" then
+        return {
+            code = "ROUTE-03",
+            title = "Adjust local runtime",
+            body = "Tune fullscreen, effects, audio mix, and text speed.",
+        }
+    end
+
+    return {
+        code = "ROUTE-04",
+        title = "Terminate process",
+        body = "Close the client and leave the archive sealed until the next shift.",
+    }
+end
+
 local function drawTitleScreen(w, h)
     drawBackground(w, h)
 
-    local left = 96
-    local top = 72
+    local left = 112
+    local top = 74
     local title_options = getTitleOptions()
+    local selected_option = title_options[math.max(1, math.min(title_index, #title_options))]
+    local selected_meta = getTitleOptionMeta(selected_option)
+    local pulse = 0.16 + 0.08 * (0.5 + 0.5 * math.sin(love.timer.getTime() * 2.4))
+
+    love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.12)
+    love.graphics.rectangle("fill", 96, 64, 4, h - 128)
+    love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.4)
+    love.graphics.rectangle("fill", 96, 226, 392, 1)
 
     love.graphics.setFont(font_title)
     love.graphics.setColor(colors.bright)
@@ -508,64 +544,71 @@ local function drawTitleScreen(w, h)
 
     love.graphics.setFont(font)
     love.graphics.setColor(colors.dim)
-    love.graphics.printf(
-        "A terminal investigation about hidden people, buried doctrine, and the price of truth.\nMeridian survives by omission. Your shift begins where the lie gets expensive.",
-        left + 4,
-        top + 58,
-        560
-    )
-
-    local quote_y = top + 150
+    love.graphics.print("A terminal investigation about hidden people, buried doctrine,", left + 4, top + 62)
+    love.graphics.print("and the price of truth.", left + 4, top + 88)
+    love.graphics.print("Meridian survives by omission.", left + 4, top + 126)
     love.graphics.setColor(colors.cyan)
-    love.graphics.printf('"Every buried population eventually learns to count the hands that buried it."', left + 4, quote_y, 580)
+    love.graphics.print("Night shift access point / operator handoff required", left + 4, top + 164)
 
-    local menu_x = 96
-    local menu_y = 308
-    local menu_w = 340
-    local menu_h = 96 + (#title_options * 36)
+    local menu_x = 112
+    local menu_y = 278
+    local menu_w = 334
+    local menu_h = 58 + (#title_options * 44)
     drawPanel(menu_x, menu_y, menu_w, menu_h, "TERMINAL ACCESS", colors.header)
 
     love.graphics.setFont(font)
     if title_index > #title_options then title_index = #title_options end
     for i, option in ipairs(title_options) do
-        drawMenuOption(menu_x + 12, menu_y + 58 + (i - 1) * 36, menu_w - 24, option, i == title_index)
+        drawMenuOption(menu_x + 14, menu_y + 44 + (i - 1) * 44, menu_w - 28, option, i == title_index)
     end
 
-    local right_x = 478
-    local right_y = 262
-    local right_w = 706
-    local right_h = 248
-    drawPanel(right_x, right_y, right_w, right_h, "SHIFT BRIEF", colors.amber)
+    local right_x = 494
+    local right_y = 278
+    local right_w = 664
+    local right_h = 214
+    drawPanel(right_x, right_y, right_w, right_h, "SELECTION DOSSIER", colors.amber)
 
-    love.graphics.setFont(font_bold)
+    love.graphics.setFont(font)
+    love.graphics.setColor(colors.amber)
+    love.graphics.print(selected_meta.code, right_x + 18, right_y + 44)
+    love.graphics.setColor(colors.cyan)
+    love.graphics.print("TARGET: " .. selected_option, right_x + 132, right_y + 44)
+
+    love.graphics.setFont(font_large)
+    love.graphics.setColor(colors.bright)
+    love.graphics.print(selected_meta.title, right_x + 18, right_y + 74)
+
     love.graphics.setFont(font)
     love.graphics.setColor(colors.text)
-    love.graphics.printf(
-        "Average target length: ~2 hours\nKeyboard only. Read closely. Compare often.\nAlt+Enter toggles fullscreen at any time.\nProgress is autosaved and validated on write.",
-        right_x + 18,
-        right_y + 58,
-        300
-    )
+    love.graphics.printf(selected_meta.body, right_x + 18, right_y + 118, 330)
+
+    love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], pulse)
+    love.graphics.rectangle("fill", right_x + 18, right_y + 152, 330, 2)
+
+    love.graphics.setColor(colors.text)
+    love.graphics.print("Length: ~2 hours", right_x + 404, right_y + 78)
+    love.graphics.print("Keyboard only", right_x + 404, right_y + 104)
+    love.graphics.print("Alt+Enter fullscreen", right_x + 404, right_y + 130)
 
     love.graphics.setColor(colors.dim)
-    love.graphics.printf(
-        "This terminal is not about reflexes. It is about contradiction, memory, and pressure. The system will not explain itself twice. If the numbers feel wrong, assume they are being made wrong on purpose.",
-        right_x + 344,
-        right_y + 58,
-        326
-    )
+    love.graphics.print("Read closely.", right_x + 404, right_y + 168)
+    love.graphics.print("Compare often.", right_x + 404, right_y + 194)
 
     local meta = Save.getMetadata()
-    drawPanel(right_x, 542, right_w, 110, "SESSION RECOVERY", colors.cyan)
+    love.graphics.setColor(colors.border)
+    love.graphics.rectangle("fill", right_x + 18, right_y + 176, right_w - 36, 1)
+    love.graphics.setFont(font_bold)
+    love.graphics.setColor(colors.header)
+    love.graphics.print("SESSION", right_x + 18, right_y + 188)
     if meta then
         love.graphics.setColor(colors.cyan)
-        love.graphics.print("Autosave detected", right_x + 20, 596)
+        love.graphics.print("AUTOSAVE DETECTED", right_x + 110, right_y + 188)
         love.graphics.setColor(colors.text)
-        love.graphics.print("Saved at: " .. tostring(meta.saved_at or "UNKNOWN"), right_x + 20, 620)
-        love.graphics.print("Chapter:  " .. tostring(meta.chapter or "UNKNOWN"), right_x + 320, 620)
+        love.graphics.print(tostring(meta.saved_at or "UNKNOWN"), right_x + 18, right_y + 212)
+        love.graphics.print("CHAPTER " .. tostring(meta.chapter or "UNKNOWN"), right_x + 390, right_y + 212)
     else
         love.graphics.setColor(colors.dim)
-        love.graphics.print("No autosave present. A new session will create one after boot.", right_x + 20, 608)
+        love.graphics.print("No autosave present. Starting a new session will create one.", right_x + 110, right_y + 200)
     end
 
     love.graphics.setColor(colors.dim)
