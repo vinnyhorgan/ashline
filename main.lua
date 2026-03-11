@@ -14,8 +14,8 @@ local terminal
 local game
 local sound
 local effect
-local render_canvas
 local font, font_bold
+local last_w, last_h
 
 local input_text = ""
 local input_cursor = 0
@@ -59,9 +59,10 @@ function love.load()
 
     terminal.on_click = function() sound:click() end
 
-    render_canvas = love.graphics.newCanvas(VIRTUAL_W, VIRTUAL_H)
+    local ww, wh = love.graphics.getDimensions()
+    last_w, last_h = ww, wh
 
-    effect = moonshine(VIRTUAL_W, VIRTUAL_H, moonshine.effects.scanlines)
+    effect = moonshine(ww, wh, moonshine.effects.scanlines)
         .chain(moonshine.effects.crt)
         .chain(moonshine.effects.glow)
         .chain(moonshine.effects.vignette)
@@ -253,27 +254,32 @@ function love.update(dt)
 end
 
 function love.draw()
-    -- render at virtual resolution to canvas
-    love.graphics.setCanvas(render_canvas)
-    love.graphics.clear()
-    effect(function()
-        terminal:render()
-    end)
-    love.graphics.setCanvas()
-
-    -- scale canvas uniformly to fill window (letterbox if needed)
     local w, h = love.graphics.getDimensions()
-    local scale = math.min(w / VIRTUAL_W, h / VIRTUAL_H)
-    local ox = math.floor((w - VIRTUAL_W * scale) / 2)
-    local oy = math.floor((h - VIRTUAL_H * scale) / 2)
+    if w ~= last_w or h ~= last_h then
+        effect.resize(w, h)
+        last_w, last_h = w, h
+    end
 
-    love.graphics.clear(0, 0, 0, 1)
-    love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.draw(render_canvas, ox, oy, 0, scale, scale)
+    effect(function()
+        -- fill entire buffer with bg so CRT edges look clean
+        love.graphics.setColor(colors.bg)
+        love.graphics.rectangle("fill", 0, 0, w, h)
+
+        -- draw terminal at virtual resolution, centered and scaled
+        love.graphics.push()
+        local scale = math.min(w / VIRTUAL_W, h / VIRTUAL_H)
+        local ox = math.floor((w - VIRTUAL_W * scale) / 2)
+        local oy = math.floor((h - VIRTUAL_H * scale) / 2)
+        love.graphics.translate(ox, oy)
+        love.graphics.scale(scale, scale)
+        terminal:render()
+        love.graphics.pop()
+    end)
 end
 
 function love.resize(w, h)
-    -- nothing to do: virtual resolution stays fixed
+    effect.resize(w, h)
+    last_w, last_h = w, h
 end
 
 function love.textinput(text)
