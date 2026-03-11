@@ -164,7 +164,7 @@ end
 
 function Terminal:setInput(text, cursor_pos)
     self.input_text = text
-    self.input_cursor = cursor_pos or #text
+    self.input_cursor = cursor_pos or utf8_len(text)
 end
 
 function Terminal:setGhost(text)
@@ -384,7 +384,7 @@ function Terminal:render()
 
         -- cursor
         if self.cursor_visible then
-            local cursor_x = input_x + self.font:getWidth(self.input_text:sub(1, self.input_cursor))
+            local cursor_x = input_x + self.font:getWidth(utf8_sub(self.input_text, 1, self.input_cursor))
             love.graphics.setColor(colors.bright)
             love.graphics.rectangle("fill", cursor_x, status_y, self.char_w * 0.8, self.char_h)
         end

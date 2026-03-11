@@ -8,6 +8,7 @@ local commands = require("commands")
 local data = require("data")
 local Settings = require("settings")
 local Save = require("save")
+local utf8 = require("utf8")
 
 local VIRTUAL_W = 1280
 local VIRTUAL_H = 800
@@ -47,12 +48,6 @@ local title_index = 1
 local pause_index = 1
 local settings_index = 1
 
-local TITLE_OPTIONS = {
-    "NEW SESSION",
-    "SETTINGS",
-    "QUIT",
-}
-
 local PAUSE_OPTIONS = {
     "RESUME",
     "SETTINGS",
@@ -87,6 +82,45 @@ local function resetInputState()
     history_index = 0
     last_unread = 0
     notification_timer = 0
+end
+
+local function utf8_len(text)
+    local ok, len = pcall(utf8.len, text or "")
+    if ok then
+        return len
+    end
+    return #(text or "")
+end
+
+local function utf8_sub(text, i, j)
+    text = text or ""
+    i = math.max(1, i or 1)
+
+    local start_byte = utf8.offset(text, i)
+    if not start_byte then
+        return ""
+    end
+
+    local end_byte
+    if j then
+        if j < i then
+            return ""
+        end
+        end_byte = utf8.offset(text, j + 1)
+        if end_byte then
+            end_byte = end_byte - 1
+        else
+            end_byte = #text
+        end
+    else
+        end_byte = #text
+    end
+
+    return text:sub(start_byte, end_byte)
+end
+
+local function clampInputCursor(text, cursor)
+    return math.max(0, math.min(utf8_len(text), cursor or utf8_len(text)))
 end
 
 local function getTitleOptions()
@@ -154,26 +188,41 @@ local function updateInput()
     end
 end
 
-local function ensureEffect()
-    local ww, wh = love.graphics.getDimensions()
-    last_w, last_h = ww, wh
-
-    effect = moonshine(ww, wh, moonshine.effects.scanlines)
+local function buildEffectChain(width, height)
+    local chain = moonshine(width, height, moonshine.effects.scanlines)
         .chain(moonshine.effects.crt)
         .chain(moonshine.effects.glow)
         .chain(moonshine.effects.vignette)
         .chain(moonshine.effects.filmgrain)
 
-    effect.scanlines.opacity = 0.12
-    effect.scanlines.thickness = 0.8
-    effect.crt.distortionFactor = {1.03, 1.035}
-    effect.crt.feather = 0.02
-    effect.glow.min_luma = 0.3
-    effect.glow.strength = 3
-    effect.vignette.opacity = 0.3
-    effect.vignette.softness = 0.8
-    effect.filmgrain.opacity = 0.03
-    effect.filmgrain.size = 1.5
+    chain.scanlines.opacity = 0.12
+    chain.scanlines.thickness = 0.8
+    chain.crt.distortionFactor = {1.03, 1.035}
+    chain.crt.feather = 0.02
+    chain.glow.min_luma = 0.3
+    chain.glow.strength = 3
+    chain.vignette.opacity = 0.3
+    chain.vignette.softness = 0.8
+    chain.filmgrain.opacity = 0.03
+    chain.filmgrain.size = 1.5
+
+    return chain
+end
+
+local function syncEffectState(force_rebuild)
+    local ww, wh = love.graphics.getDimensions()
+    last_w, last_h = ww, wh
+
+    if not settings or not settings.post_effects then
+        effect = nil
+        return
+    end
+
+    if force_rebuild or not effect then
+        effect = buildEffectChain(ww, wh)
+    else
+        effect.resize(ww, wh)
+    end
 end
 
 local function saveSettings()
@@ -182,6 +231,8 @@ end
 
 local function applySettings(persist)
     settings = Settings.clamp(settings)
+    local fullscreen_changed = false
+    local effects_were_enabled = effect ~= nil
 
     if sound then
         sound:setMix(
@@ -194,9 +245,14 @@ local function applySettings(persist)
 
     if love.window.getFullscreen() ~= settings.fullscreen then
         love.window.setFullscreen(settings.fullscreen, "desktop")
-        local ww, wh = love.graphics.getDimensions()
-        if effect then effect.resize(ww, wh) end
-        last_w, last_h = ww, wh
+        fullscreen_changed = true
+    end
+
+    if settings.post_effects then
+        syncEffectState(fullscreen_changed or not effects_were_enabled)
+    else
+        effect = nil
+        last_w, last_h = love.graphics.getDimensions()
     end
 
     if persist then
@@ -316,11 +372,14 @@ local function continueSession()
     if payload.app then
         command_history = payload.app.command_history or {}
         history_index = payload.app.history_index or (#command_history + 1)
+        history_index = math.max(1, math.min(#command_history + 1, history_index))
+        input_text = payload.app.input_text or ""
+        input_cursor = clampInputCursor(input_text, payload.app.input_cursor)
     else
-        history_index = 1
+        history_index = #command_history + 1
+        input_text = ""
+        input_cursor = 0
     end
-    input_text = ""
-    input_cursor = 0
 
     boot_done = true
     boot_index = #boot_sequence
@@ -358,23 +417,48 @@ local function closeSettings()
     app_state = settings_return_state
 end
 
+local function getViewport()
+    local w, h = love.graphics.getDimensions()
+    local scale = math.min(w / VIRTUAL_W, h / VIRTUAL_H)
+    local ox = math.floor((w - VIRTUAL_W * scale) * 0.5)
+    local oy = math.floor((h - VIRTUAL_H * scale) * 0.5)
+    return w, h, scale, ox, oy
+end
+
+local function renderVirtual(draw_fn)
+    local _, _, scale, ox, oy = getViewport()
+    love.graphics.push()
+    love.graphics.translate(ox, oy)
+    love.graphics.scale(scale, scale)
+    draw_fn(VIRTUAL_W, VIRTUAL_H)
+    love.graphics.pop()
+end
+
 local function drawBackground(w, h)
     love.graphics.setColor(colors.bg)
     love.graphics.rectangle("fill", 0, 0, w, h)
 
     local t = love.timer.getTime()
     love.graphics.setLineWidth(1)
-    love.graphics.setColor(colors.very_dim[1], colors.very_dim[2], colors.very_dim[3], 0.6)
+    love.graphics.setColor(colors.very_dim[1], colors.very_dim[2], colors.very_dim[3], 0.55)
 
-    for i = 0, 14 do
-        local y = math.floor(h * 0.1 + i * (h * 0.055))
-        local wobble = math.sin(t * 0.4 + i * 0.7) * 18
-        love.graphics.line(0, y, w * 0.72 + wobble, y)
+    love.graphics.rectangle("fill", 64, 56, 4, h - 112)
+    love.graphics.rectangle("fill", w - 68, 56, 4, h - 112)
+
+    for i = 0, 15 do
+        local y = 92 + i * 34
+        local wobble = math.sin(t * 0.45 + i * 0.7) * 22
+        love.graphics.line(0, y, w * 0.76 + wobble, y)
+    end
+
+    love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.22)
+    for x = 96, w - 96, 96 do
+        love.graphics.line(x, 64, x, h - 64)
     end
 
     love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.35)
-    love.graphics.rectangle("line", math.floor(w * 0.08), math.floor(h * 0.12), math.floor(w * 0.84), math.floor(h * 0.72))
-    love.graphics.rectangle("line", math.floor(w * 0.11), math.floor(h * 0.16), math.floor(w * 0.78), math.floor(h * 0.64))
+    love.graphics.rectangle("line", 52, 52, w - 104, h - 104)
+    love.graphics.rectangle("line", 78, 78, w - 156, h - 156)
 end
 
 local function drawBox(x, y, w, h)
@@ -384,70 +468,111 @@ local function drawBox(x, y, w, h)
     love.graphics.rectangle("fill", x + 1, y + 1, w - 2, h - 2)
 end
 
-local function drawTitleScreen()
-    local w, h = love.graphics.getDimensions()
+local function drawPanel(x, y, w, h, title, accent)
+    drawBox(x, y, w, h)
+    love.graphics.setColor(colors.very_dim[1], colors.very_dim[2], colors.very_dim[3], 0.7)
+    love.graphics.rectangle("fill", x + 1, y + 1, w - 2, 38)
+    love.graphics.setColor(accent or colors.header)
+    love.graphics.setFont(font_bold)
+    love.graphics.print(title, x + 18, y + 12)
+    love.graphics.setColor(colors.border)
+    love.graphics.rectangle("fill", x + 18, y + 38, w - 36, 1)
+end
+
+local function drawMenuOption(x, y, w, label, selected)
+    if selected then
+        love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.12)
+        love.graphics.rectangle("fill", x, y - 4, w, 28)
+        love.graphics.setColor(colors.cyan)
+        love.graphics.rectangle("fill", x, y - 4, 3, 28)
+    end
+
+    love.graphics.setColor(selected and colors.bright or colors.text)
+    love.graphics.print((selected and "> " or "  ") .. label, x + 16, y)
+end
+
+local function drawTitleScreen(w, h)
     drawBackground(w, h)
 
-    local left = math.floor(w * 0.12)
-    local top = math.floor(h * 0.14)
+    local left = 96
+    local top = 72
+    local title_options = getTitleOptions()
 
     love.graphics.setFont(font_title)
     love.graphics.setColor(colors.bright)
     love.graphics.print("ASHLINE", left, top)
 
+    love.graphics.setFont(font_bold)
+    love.graphics.setColor(colors.cyan)
+    love.graphics.print("MERIDIAN INTERNAL SYSTEM / NIGHT SHIFT", left + 4, top - 20)
+
     love.graphics.setFont(font)
     love.graphics.setColor(colors.dim)
-    love.graphics.print("A terminal investigation about hidden people, buried doctrine, and the price of truth.", left + 4, top + 58)
-    love.graphics.print("Meridian survives by omission. Your shift begins where the lie gets expensive.", left + 4, top + 82)
+    love.graphics.printf(
+        "A terminal investigation about hidden people, buried doctrine, and the price of truth.\nMeridian survives by omission. Your shift begins where the lie gets expensive.",
+        left + 4,
+        top + 58,
+        560
+    )
 
-    local quote_y = top + 150
+    local quote_y = top + 148
     love.graphics.setColor(colors.cyan)
-    love.graphics.print('"Every buried population eventually learns to count the hands that buried it."', left + 4, quote_y)
+    love.graphics.printf('"Every buried population eventually learns to count the hands that buried it."', left + 4, quote_y, 580)
 
-    local menu_x = math.floor(w * 0.14)
-    local menu_y = math.floor(h * 0.48)
-    local menu_w = math.floor(w * 0.32)
-    local menu_h = 176
-    drawBox(menu_x, menu_y, menu_w, menu_h)
-
-    love.graphics.setFont(font_bold)
-    love.graphics.setColor(colors.header)
-    love.graphics.print("TERMINAL ACCESS", menu_x + 18, menu_y + 18)
+    local menu_x = 96
+    local menu_y = 292
+    local menu_w = 340
+    local menu_h = 96 + (#title_options * 36)
+    drawPanel(menu_x, menu_y, menu_w, menu_h, "TERMINAL ACCESS", colors.header)
 
     love.graphics.setFont(font)
-    local title_options = getTitleOptions()
     if title_index > #title_options then title_index = #title_options end
     for i, option in ipairs(title_options) do
-        local selected = i == title_index
-        love.graphics.setColor(selected and colors.bright or colors.text)
-        love.graphics.print((selected and "> " or "  ") .. option, menu_x + 22, menu_y + 54 + (i - 1) * 30)
+        drawMenuOption(menu_x + 12, menu_y + 58 + (i - 1) * 36, menu_w - 24, option, i == title_index)
     end
 
-    local right_x = math.floor(w * 0.54)
-    local right_y = math.floor(h * 0.48)
-    drawBox(right_x, right_y, math.floor(w * 0.32), 176)
+    local right_x = 478
+    local right_y = 216
+    local right_w = 706
+    local right_h = 304
+    drawPanel(right_x, right_y, right_w, right_h, "SHIFT BRIEF", colors.amber)
+
     love.graphics.setFont(font_bold)
-    love.graphics.setColor(colors.header)
-    love.graphics.print("RUNTIME NOTES", right_x + 18, right_y + 18)
     love.graphics.setFont(font)
     love.graphics.setColor(colors.text)
-    love.graphics.print("Average target length: ~2 hours", right_x + 18, right_y + 54)
-    love.graphics.print("Keyboard only. Read closely. Compare often.", right_x + 18, right_y + 82)
-    love.graphics.print("Alt+Enter toggles fullscreen at any time.", right_x + 18, right_y + 110)
+    love.graphics.printf(
+        "Average target length: ~2 hours\nKeyboard only. Read closely. Compare often.\nAlt+Enter toggles fullscreen at any time.\nProgress is autosaved and validated on write.",
+        right_x + 18,
+        right_y + 58,
+        300
+    )
+
+    love.graphics.setColor(colors.dim)
+    love.graphics.printf(
+        "This terminal is not about reflexes. It is about contradiction, memory, and pressure. The system will not explain itself twice. If the numbers feel wrong, assume they are being made wrong on purpose.",
+        right_x + 344,
+        right_y + 58,
+        326
+    )
+
     local meta = Save.getMetadata()
+    drawPanel(right_x, 548, right_w, 118, "SESSION RECOVERY", colors.cyan)
     if meta then
         love.graphics.setColor(colors.cyan)
-        love.graphics.print("Autosave: " .. tostring(meta.saved_at or "UNKNOWN"), right_x + 18, right_y + 138)
+        love.graphics.print("Autosave detected", right_x + 20, 606)
+        love.graphics.setColor(colors.text)
+        love.graphics.print("Saved at: " .. tostring(meta.saved_at or "UNKNOWN"), right_x + 20, 632)
+        love.graphics.print("Chapter:  " .. tostring(meta.chapter or "UNKNOWN"), right_x + 320, 632)
     else
         love.graphics.setColor(colors.dim)
-        love.graphics.print("No autosave present.", right_x + 18, right_y + 138)
+        love.graphics.print("No autosave present. A new session will create one after boot.", right_x + 20, 620)
     end
 
     love.graphics.setColor(colors.dim)
-    love.graphics.print("Up/Down navigate  Enter select", left + 4, h - 48)
+    love.graphics.print("Up/Down navigate  Enter select  Escape quit", left + 4, h - 42)
     if save_notice_timer > 0 and #save_notice > 0 then
         love.graphics.setColor(colors.amber)
-        love.graphics.print(save_notice, left + 4, h - 74)
+        love.graphics.print(save_notice, left + 4, h - 68)
     end
 end
 
@@ -468,39 +593,36 @@ local function formatSettingValue(option)
     return ""
 end
 
-local function drawSettingsScreen()
-    local w, h = love.graphics.getDimensions()
+local function drawSettingsScreen(w, h)
     if settings_return_state == "pause" and terminal and game then
-        drawBackground(w, h)
-        local scale = math.min(w / VIRTUAL_W, h / VIRTUAL_H)
-        local ox = math.floor((w - VIRTUAL_W * scale) / 2)
-        local oy = math.floor((h - VIRTUAL_H * scale) / 2)
-        love.graphics.push()
-        love.graphics.translate(ox, oy)
-        love.graphics.scale(scale, scale)
         terminal:render()
-        love.graphics.pop()
+        love.graphics.setColor(0, 0, 0, 0.62)
+        love.graphics.rectangle("fill", 0, 0, w, h)
     else
         drawBackground(w, h)
     end
 
-    local box_x = math.floor(w * 0.18)
-    local box_y = math.floor(h * 0.14)
-    local box_w = math.floor(w * 0.64)
-    local box_h = math.floor(h * 0.7)
-    drawBox(box_x, box_y, box_w, box_h)
+    local box_x = 176
+    local box_y = 112
+    local box_w = 928
+    local box_h = 580
+    drawPanel(box_x, box_y, box_w, box_h, "SETTINGS", colors.header)
 
     love.graphics.setFont(font_title)
     love.graphics.setColor(colors.bright)
-    love.graphics.print("SETTINGS", box_x + 26, box_y + 20)
+    love.graphics.print("SETTINGS", box_x + 24, box_y + 54)
 
     love.graphics.setFont(font)
     love.graphics.setColor(colors.dim)
-    love.graphics.print("Changes apply immediately and persist to disk.", box_x + 28, box_y + 74)
+    love.graphics.print("Changes apply immediately and persist as JSON.", box_x + 28, box_y + 112)
 
     for i, option in ipairs(SETTINGS_OPTIONS) do
-        local y = box_y + 126 + (i - 1) * 36
+        local y = box_y + 176 + (i - 1) * 38
         local selected = i == settings_index
+        if selected then
+            love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.12)
+            love.graphics.rectangle("fill", box_x + 22, y - 4, box_w - 44, 28)
+        end
         love.graphics.setColor(selected and colors.bright or colors.text)
         love.graphics.print((selected and "> " or "  ") .. option.label, box_x + 32, y)
 
@@ -515,50 +637,35 @@ local function drawSettingsScreen()
     love.graphics.print("Left/Right adjust  Enter toggle/select  Esc back", box_x + 28, box_y + box_h - 42)
 end
 
-local function drawPauseOverlay()
-    local w, h = love.graphics.getDimensions()
-    drawBackground(w, h)
-
-    local scale = math.min(w / VIRTUAL_W, h / VIRTUAL_H)
-    local ox = math.floor((w - VIRTUAL_W * scale) / 2)
-    local oy = math.floor((h - VIRTUAL_H * scale) / 2)
-    love.graphics.push()
-    love.graphics.translate(ox, oy)
-    love.graphics.scale(scale, scale)
+local function drawPauseOverlay(w, h)
     terminal:render()
-    love.graphics.pop()
-
-    love.graphics.setColor(0, 0, 0, 0.45)
+    love.graphics.setColor(0, 0, 0, 0.52)
     love.graphics.rectangle("fill", 0, 0, w, h)
 
-    local box_x = math.floor(w * 0.35)
-    local box_y = math.floor(h * 0.26)
-    local box_w = math.floor(w * 0.3)
-    local box_h = 210
-    drawBox(box_x, box_y, box_w, box_h)
+    local box_x = 430
+    local box_y = 218
+    local box_w = 420
+    local box_h = 242
+    drawPanel(box_x, box_y, box_w, box_h, "SESSION PAUSED", colors.amber)
 
     love.graphics.setFont(font_large)
     love.graphics.setColor(colors.bright)
-    love.graphics.print("PAUSED", box_x + 24, box_y + 20)
+    love.graphics.print("PAUSED", box_x + 24, box_y + 58)
 
     love.graphics.setFont(font)
     for i, option in ipairs(PAUSE_OPTIONS) do
         local selected = i == pause_index
+        if selected then
+            love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.12)
+            love.graphics.rectangle("fill", box_x + 20, box_y + 104 + (i - 1) * 32, box_w - 40, 26)
+        end
         love.graphics.setColor(selected and colors.bright or colors.text)
-        love.graphics.print((selected and "> " or "  ") .. option, box_x + 30, box_y + 74 + (i - 1) * 30)
+        love.graphics.print((selected and "> " or "  ") .. option, box_x + 30, box_y + 108 + (i - 1) * 32)
     end
 end
 
 local function drawScaledTerminal()
-    local w, h = love.graphics.getDimensions()
-    local scale = math.min(w / VIRTUAL_W, h / VIRTUAL_H)
-    local ox = math.floor((w - VIRTUAL_W * scale) / 2)
-    local oy = math.floor((h - VIRTUAL_H * scale) / 2)
-    love.graphics.push()
-    love.graphics.translate(ox, oy)
-    love.graphics.scale(scale, scale)
     terminal:render()
-    love.graphics.pop()
 end
 
 local function executeCommand()
@@ -672,6 +779,7 @@ function love.load()
     love.keyboard.setKeyRepeat(true)
 
     settings = Settings.load()
+    last_w, last_h = love.graphics.getDimensions()
 
     font = love.graphics.newFont("ibm_plex_mono/IBMPlexMono-Regular.ttf", 15)
     font_bold = love.graphics.newFont("ibm_plex_mono/IBMPlexMono-Bold.ttf", 15)
@@ -684,7 +792,6 @@ function love.load()
     sound:load()
     terminal.on_click = function() sound:click() end
 
-    ensureEffect()
     applySettings(false)
     sound:startAmbient()
     boot_sequence = boot.getSequence()
@@ -799,6 +906,7 @@ function love.update(dt)
         end
 
         terminal:update(dt)
+        updateHeader()
         updateStatus()
     elseif save_notice_timer > 0 then
         save_notice_timer = math.max(0, save_notice_timer - dt)
@@ -808,24 +916,32 @@ end
 function love.draw()
     local w, h = love.graphics.getDimensions()
     if w ~= last_w or h ~= last_h then
-        if effect then effect.resize(w, h) end
-        last_w, last_h = w, h
+        if settings and settings.post_effects then
+            syncEffectState(false)
+        else
+            last_w, last_h = w, h
+        end
     end
 
     local function draw_content()
-        if app_state == "title" then
-            drawTitleScreen()
-        elseif app_state == "settings" then
-            drawSettingsScreen()
-        elseif app_state == "pause" then
-            drawPauseOverlay()
-        else
-            love.graphics.setColor(colors.bg)
-            love.graphics.rectangle("fill", 0, 0, w, h)
-            if terminal then
-                drawScaledTerminal()
+        love.graphics.setColor(colors.bg)
+        love.graphics.rectangle("fill", 0, 0, w, h)
+
+        renderVirtual(function(vw, vh)
+            if app_state == "title" then
+                drawTitleScreen(vw, vh)
+            elseif app_state == "settings" then
+                drawSettingsScreen(vw, vh)
+            elseif app_state == "pause" then
+                drawPauseOverlay(vw, vh)
+            else
+                if terminal then
+                    drawScaledTerminal()
+                else
+                    drawBackground(vw, vh)
+                end
             end
-        end
+        end)
     end
 
     if settings.post_effects and effect then
@@ -836,8 +952,10 @@ function love.draw()
 end
 
 function love.resize(w, h)
-    if effect then effect.resize(w, h) end
     last_w, last_h = w, h
+    if settings and settings.post_effects then
+        syncEffectState(true)
+    end
 end
 
 function love.textinput(text)
@@ -847,8 +965,8 @@ function love.textinput(text)
         return
     end
 
-    input_text = input_text:sub(1, input_cursor) .. text .. input_text:sub(input_cursor + 1)
-    input_cursor = input_cursor + #text
+    input_text = utf8_sub(input_text, 1, input_cursor) .. text .. utf8_sub(input_text, input_cursor + 1)
+    input_cursor = input_cursor + utf8_len(text)
     updateInput()
     sound:click()
 end
@@ -965,32 +1083,32 @@ function love.keypressed(key, scancode, isrepeat)
         executeCommand()
     elseif key == "backspace" then
         if input_cursor > 0 then
-            input_text = input_text:sub(1, input_cursor - 1) .. input_text:sub(input_cursor + 1)
+            input_text = utf8_sub(input_text, 1, input_cursor - 1) .. utf8_sub(input_text, input_cursor + 1)
             input_cursor = input_cursor - 1
             updateInput()
         end
     elseif key == "delete" then
-        if input_cursor < #input_text then
-            input_text = input_text:sub(1, input_cursor) .. input_text:sub(input_cursor + 2)
+        if input_cursor < utf8_len(input_text) then
+            input_text = utf8_sub(input_text, 1, input_cursor) .. utf8_sub(input_text, input_cursor + 2)
             updateInput()
         end
     elseif key == "left" then
         input_cursor = math.max(0, input_cursor - 1)
         updateInput()
     elseif key == "right" then
-        input_cursor = math.min(#input_text, input_cursor + 1)
+        input_cursor = math.min(utf8_len(input_text), input_cursor + 1)
         updateInput()
     elseif key == "home" then
         input_cursor = 0
         updateInput()
     elseif key == "end" then
-        input_cursor = #input_text
+        input_cursor = utf8_len(input_text)
         updateInput()
     elseif key == "tab" and not isrepeat then
         local completed = commands.applyCompletion(input_text, game)
         if completed ~= input_text then
             input_text = completed
-            input_cursor = #input_text
+            input_cursor = utf8_len(input_text)
             updateInput()
             sound:click()
         end
@@ -998,14 +1116,14 @@ function love.keypressed(key, scancode, isrepeat)
         if #command_history > 0 then
             history_index = math.max(1, history_index - 1)
             input_text = command_history[history_index]
-            input_cursor = #input_text
+            input_cursor = utf8_len(input_text)
             updateInput()
         end
     elseif key == "down" then
         if history_index < #command_history then
             history_index = history_index + 1
             input_text = command_history[history_index]
-            input_cursor = #input_text
+            input_cursor = utf8_len(input_text)
             updateInput()
         else
             history_index = #command_history + 1

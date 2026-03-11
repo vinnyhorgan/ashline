@@ -3,6 +3,7 @@ package.path = "./?.lua;" .. package.path
 local Game = require("game")
 local commands = require("commands")
 local Save = require("save")
+local RUNTIME_SLOT = "__ashline_test_" .. ((jit and "luajit") or ((_VERSION or "lua"):gsub("%W+", "_"):lower()))
 
 local function assert_true(value, message)
     if not value then
@@ -148,7 +149,7 @@ local function verify_ending(action_id, expected_ending, include_meds)
 end
 
 local function verify_save_roundtrip()
-    local slot = "__ashline_test"
+    local slot = RUNTIME_SLOT
     Save.delete(slot)
 
     local game = build_final_state(true)

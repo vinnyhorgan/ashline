@@ -80,6 +80,14 @@ local function paths(slot)
     slot = slot or Save.SLOT
     return {
         current = slot .. ".save.json",
+        backup = slot .. ".save.backup.json",
+        temp = slot .. ".save.tmp.json",
+    }
+end
+
+local function legacy_paths(slot)
+    slot = slot or Save.SLOT
+    return {
         backup = slot .. ".save.bak",
         temp = slot .. ".save.tmp",
     }
@@ -129,15 +137,28 @@ local function read_valid(path, fs)
     return unpack_blob(blob)
 end
 
+local function read_valid_blob(path, fs)
+    local blob = fs.read(path)
+    if not blob then
+        return nil, nil, "Missing save."
+    end
+
+    local payload, err = unpack_blob(blob)
+    if not payload then
+        return nil, nil, err
+    end
+
+    return payload, blob
+end
+
 function Save.exists(slot, custom_fs)
-    local fs = get_fs(custom_fs)
-    local p = paths(slot)
-    return fs.exists(p.current) or fs.exists(p.backup)
+    return Save.getMetadata(slot, custom_fs) ~= nil
 end
 
 function Save.getMetadata(slot, custom_fs)
     local fs = get_fs(custom_fs)
     local p = paths(slot)
+    local legacy = legacy_paths(slot)
 
     local payload = read_valid(p.current, fs)
     if payload then
@@ -157,6 +178,15 @@ function Save.getMetadata(slot, custom_fs)
         }
     end
 
+    payload = read_valid(legacy.backup, fs)
+    if payload then
+        return {
+            source = "backup",
+            saved_at = payload.saved_at,
+            chapter = payload.game and payload.game.chapter,
+        }
+    end
+
     return nil
 end
 
@@ -164,6 +194,14 @@ function Save.save(slot, payload, custom_fs)
     local fs = get_fs(custom_fs)
     local p = paths(slot)
     local wrapped = pack(payload)
+    local previous_valid_blob = nil
+
+    if fs.exists(p.current) then
+        local current_payload, current_blob = read_valid_blob(p.current, fs)
+        if current_payload and current_blob then
+            previous_valid_blob = current_blob
+        end
+    end
 
     if not fs.write(p.temp, wrapped) then
         return false, "Failed to write temporary save file."
@@ -175,20 +213,32 @@ function Save.save(slot, payload, custom_fs)
         return false, "Temporary save verification failed: " .. temp_err
     end
 
-    if fs.exists(p.current) then
-        local current_blob = fs.read(p.current)
-        if current_blob then
-            fs.write(p.backup, current_blob)
+    if previous_valid_blob then
+        if not fs.write(p.backup, previous_valid_blob) then
+            fs.remove(p.temp)
+            return false, "Failed to refresh backup save file."
+        end
+
+        local backup_payload, backup_err = read_valid(p.backup, fs)
+        if not backup_payload then
+            fs.remove(p.temp)
+            return false, "Backup save verification failed: " .. backup_err
         end
     end
 
     if not fs.write(p.current, wrapped) then
+        if previous_valid_blob then
+            fs.write(p.current, previous_valid_blob)
+        end
         fs.remove(p.temp)
         return false, "Failed to write primary save file."
     end
 
     local current_payload, current_err = read_valid(p.current, fs)
     if not current_payload then
+        if previous_valid_blob then
+            fs.write(p.current, previous_valid_blob)
+        end
         fs.remove(p.temp)
         return false, "Primary save verification failed: " .. current_err
     end
@@ -200,6 +250,7 @@ end
 function Save.load(slot, custom_fs)
     local fs = get_fs(custom_fs)
     local p = paths(slot)
+    local legacy = legacy_paths(slot)
 
     local payload, err = read_valid(p.current, fs)
     if payload then
@@ -207,9 +258,17 @@ function Save.load(slot, custom_fs)
     end
 
     local backup_payload, backup_err = read_valid(p.backup, fs)
+    if not backup_payload then
+        backup_payload, backup_err = read_valid(legacy.backup, fs)
+    end
     if backup_payload then
         local wrapped = pack(backup_payload)
-        fs.write(p.current, wrapped)
+        if fs.write(p.current, wrapped) then
+            local restored_payload = read_valid(p.current, fs)
+            if not restored_payload then
+                fs.remove(p.current)
+            end
+        end
         return backup_payload, "backup"
     end
 
@@ -219,9 +278,12 @@ end
 function Save.delete(slot, custom_fs)
     local fs = get_fs(custom_fs)
     local p = paths(slot)
+    local legacy = legacy_paths(slot)
     fs.remove(p.current)
     fs.remove(p.backup)
     fs.remove(p.temp)
+    fs.remove(legacy.backup)
+    fs.remove(legacy.temp)
     return true
 end
 

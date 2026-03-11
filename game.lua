@@ -71,6 +71,22 @@ local function copy_array(source)
     return out
 end
 
+local function compute_decisions_unlocked(self)
+    return self.flags["doctrine_unlocked"]
+        and self.flags["dawn_vault_unlocked"]
+        and self.flags["model_generated"]
+        and self.flags["surface_model_generated"]
+        and self.flags["surface_cache_decoded"]
+        and self.flags["camera_looped"]
+        and self.records_read["DIR-9104"]
+        and self.records_read["DIR-9991"]
+        and self.records_read["INC-7316"]
+        and self.records_read["DIR-8700"]
+        and self.records_read["DIR-9408"]
+        and self.records_read["INC-6117"]
+        and self.records_read["INC-7336"]
+end
+
 function Game.new()
     local self = setmetatable({}, Game)
     self.phase = "boot"
@@ -126,7 +142,7 @@ function Game.fromSnapshot(snapshot)
         end
     end
 
-    self:checkTriggers("load")
+    self.decisions_unlocked = compute_decisions_unlocked(self)
     self:updateDerivedState()
     return self
 end
@@ -311,20 +327,7 @@ function Game:checkTriggers(_context)
         self:queueMessage("MSG-012", 4.0)
     end
 
-    self.decisions_unlocked = self.flags["doctrine_unlocked"]
-        and self.flags["dawn_vault_unlocked"]
-        and self.flags["model_generated"]
-        and self.flags["surface_model_generated"]
-        and self.flags["surface_cache_decoded"]
-        and self.flags["camera_looped"]
-        and self.records_read["DIR-9104"]
-        and self.records_read["DIR-9991"]
-        and self.records_read["INC-7316"]
-        and self.records_read["DIR-8700"]
-        and self.records_read["DIR-9408"]
-        and self.records_read["INC-6117"]
-        and self.records_read["INC-7336"]
-
+    self.decisions_unlocked = compute_decisions_unlocked(self)
     self:updateDerivedState()
 end
 
