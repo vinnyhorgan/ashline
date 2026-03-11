@@ -28,13 +28,13 @@ function boot.getSequence()
         {delay = 0.05, segments = {
             {text = "|    ", color = colors.border},
             {text = "A S H L I N E", color = colors.bright},
-            {text = "   Terminal Operating System       ", color = colors.border},
+            {text = "   Terminal Operating System               ", color = colors.border},
             {text = "|", color = colors.border},
         }},
         {delay = 0.05, segments = {
             {text = "|    ", color = colors.border},
             {text = "Silo Meridian  |  Terminal ARC-7  |  2071.03.14", color = colors.text},
-            {text = "  |", color = colors.border},
+            {text = "         |", color = colors.border},
         }},
         {delay = 0.05, segments = {{text = "|                                                            |", color = colors.border}}},
         {delay = 0.05, segments = {{text = "+============================================================+", color = colors.border}}},
