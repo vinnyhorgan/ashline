@@ -321,8 +321,7 @@ function Terminal:render()
     -- separator after header
     love.graphics.setColor(colors.border)
     local sep_y = y + math.floor(self.char_h / 2)
-    love.graphics.setLineWidth(1)
-    love.graphics.line(x0, sep_y, self.width - MARGIN_X, sep_y)
+    love.graphics.rectangle("fill", x0, sep_y, self.width - MARGIN_X * 2, 1)
     y = y + self.char_h
 
     -- content area
@@ -352,8 +351,7 @@ function Terminal:render()
     local status_y = content_start_y + self.content_rows * self.char_h
     love.graphics.setColor(colors.border)
     local sep2_y = status_y + math.floor(self.char_h / 2)
-    love.graphics.setLineWidth(1)
-    love.graphics.line(x0, sep2_y, self.width - MARGIN_X, sep2_y)
+    love.graphics.rectangle("fill", x0, sep2_y, self.width - MARGIN_X * 2, 1)
     status_y = status_y + self.char_h
 
     -- status bar
@@ -365,8 +363,7 @@ function Terminal:render()
     -- separator before input
     love.graphics.setColor(colors.border)
     local sep3_y = status_y + math.floor(self.char_h / 2)
-    love.graphics.setLineWidth(1)
-    love.graphics.line(x0, sep3_y, self.width - MARGIN_X, sep3_y)
+    love.graphics.rectangle("fill", x0, sep3_y, self.width - MARGIN_X * 2, 1)
     status_y = status_y + self.char_h
 
     -- input line
