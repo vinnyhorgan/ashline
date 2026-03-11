@@ -123,20 +123,32 @@ function updateStatus()
     elseif game.ending then
         phase_text = "SESSION ENDING"
         phase_color = colors.red
+    elseif game.chapter == 1 then
+        phase_text = "ANOMALY TRIAGE"
+        phase_color = colors.bright
+    elseif game.chapter == 2 then
+        phase_text = "HIDDEN OCCUPANCY"
+        phase_color = colors.cyan
+    elseif game.chapter == 3 then
+        phase_text = "SUPPRESSION LEDGER"
+        phase_color = colors.amber
+    elseif game.chapter == 4 then
+        phase_text = "TERMINAL DECISION"
+        phase_color = colors.red
     end
 
     terminal:setStatus({
-        {text = " STATUS:", color = colors.dim},
+        {text = " PHASE:", color = colors.dim},
         {text = phase_text, color = phase_color},
         {text = "  |  ", color = colors.border},
-        {text = "OPERATOR:", color = colors.dim},
-        {text = "CIV-0031", color = colors.text},
+        {text = "PROOF:", color = colors.dim},
+        {text = tostring(math.floor(game.proof_score)), color = colors.bright},
         {text = "  |  ", color = colors.border},
-        {text = "CLEARANCE:", color = colors.dim},
-        {text = "LV-2", color = colors.text},
+        {text = "RISK:", color = colors.dim},
+        {text = tostring(game.audit_risk), color = game.audit_risk >= 5 and colors.red or colors.amber},
         {text = "  |  ", color = colors.border},
-        {text = "SCORE:", color = colors.dim},
-        {text = tostring(math.floor(game.investigation_score)), color = colors.bright},
+        {text = "STRAIN:", color = colors.dim},
+        {text = tostring(game.strain), color = game.strain >= 5 and colors.red or colors.amber},
     })
 end
 
@@ -227,10 +239,11 @@ function love.update(dt)
             terminal:addSegments({{text = "  ======================================================", color = colors.border}})
             terminal:addBlank()
             terminal:addSegments({{text = "  ASHLINE", color = colors.bright}})
-            terminal:addSegments({{text = "  A terminal narrative by Copilot & You", color = colors.dim}})
+            terminal:addSegments({{text = "  An archive of pressure, omission, and choice", color = colors.dim}})
             terminal:addBlank()
             terminal:addSegments({{text = '  Ending: "' .. ending_data.title .. '"', color = colors.amber}})
-            terminal:addSegments({{text = "  Investigation score: " .. math.floor(game.investigation_score), color = colors.text}})
+            terminal:addSegments({{text = "  Proof gathered: " .. math.floor(game.proof_score), color = colors.text}})
+            terminal:addSegments({{text = "  Audit risk: " .. tostring(game.audit_risk) .. "  |  Silo strain: " .. tostring(game.strain), color = colors.text}})
             terminal:addSegments({{text = "  Records examined: " .. countTable(game.records_read), color = colors.text}})
             terminal:addSegments({{text = "  Personnel reviewed: " .. countTable(game.personnel_viewed), color = colors.text}})
             terminal:addBlank()
