@@ -67,13 +67,13 @@ function love.load()
         .chain(moonshine.effects.vignette)
         .chain(moonshine.effects.filmgrain)
 
-    effect.scanlines.opacity = 0.25
+    effect.scanlines.opacity = 0.12
     effect.scanlines.thickness = 0.8
     effect.crt.distortionFactor = {1.03, 1.035}
     effect.crt.feather = 0.02
-    effect.glow.min_luma = 0.25
+    effect.glow.min_luma = 0.3
     effect.glow.strength = 3
-    effect.vignette.opacity = 0.35
+    effect.vignette.opacity = 0.3
     effect.vignette.softness = 0.8
     effect.filmgrain.opacity = 0.03
     effect.filmgrain.size = 1.5
@@ -261,12 +261,15 @@ function love.draw()
     end)
     love.graphics.setCanvas()
 
-    -- scale canvas to fill window
+    -- scale canvas uniformly to fill window (letterbox if needed)
     local w, h = love.graphics.getDimensions()
-    local sx = w / VIRTUAL_W
-    local sy = h / VIRTUAL_H
+    local scale = math.min(w / VIRTUAL_W, h / VIRTUAL_H)
+    local ox = math.floor((w - VIRTUAL_W * scale) / 2)
+    local oy = math.floor((h - VIRTUAL_H * scale) / 2)
+
+    love.graphics.clear(0, 0, 0, 1)
     love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.draw(render_canvas, 0, 0, 0, sx, sy)
+    love.graphics.draw(render_canvas, ox, oy, 0, scale, scale)
 end
 
 function love.resize(w, h)
