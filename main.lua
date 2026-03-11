@@ -56,15 +56,18 @@ function love.load()
     terminal.on_click = function() sound:click() end
 
     effect = moonshine(moonshine.effects.scanlines)
+        .chain(moonshine.effects.crt)
         .chain(moonshine.effects.glow)
         .chain(moonshine.effects.vignette)
         .chain(moonshine.effects.filmgrain)
 
-    effect.scanlines.opacity = 0.08
+    effect.scanlines.opacity = 0.25
     effect.scanlines.thickness = 0.8
-    effect.glow.min_luma = 0.4
-    effect.glow.strength = 2
-    effect.vignette.opacity = 0.3
+    effect.crt.distortionFactor = {1.03, 1.035}
+    effect.crt.feather = 0.02
+    effect.glow.min_luma = 0.25
+    effect.glow.strength = 3
+    effect.vignette.opacity = 0.35
     effect.vignette.softness = 0.8
     effect.filmgrain.opacity = 0.03
     effect.filmgrain.size = 1.5
@@ -89,11 +92,11 @@ function updateHeader()
 
     terminal:setHeader({
         {text = " ASHLINE", color = colors.bright},
-        {text = " ═ ", color = colors.border},
+        {text = " | ", color = colors.border},
         {text = "SILO MERIDIAN", color = colors.text},
-        {text = " ═ ", color = colors.border},
+        {text = " | ", color = colors.border},
         {text = "ARC-7", color = colors.text},
-        {text = " ═ ", color = colors.border},
+        {text = " | ", color = colors.border},
         {text = "2071.03.14 " .. time_str, color = colors.dim},
         {text = "    ", color = colors.bg},
         {text = "ALERTS:", color = alert_color},
@@ -118,13 +121,13 @@ function updateStatus()
     terminal:setStatus({
         {text = " STATUS:", color = colors.dim},
         {text = phase_text, color = phase_color},
-        {text = "  ║  ", color = colors.border},
+        {text = "  |  ", color = colors.border},
         {text = "OPERATOR:", color = colors.dim},
         {text = "CIV-0031", color = colors.text},
-        {text = "  ║  ", color = colors.border},
+        {text = "  |  ", color = colors.border},
         {text = "CLEARANCE:", color = colors.dim},
         {text = "LV-2", color = colors.text},
-        {text = "  ║  ", color = colors.border},
+        {text = "  |  ", color = colors.border},
         {text = "SCORE:", color = colors.dim},
         {text = tostring(math.floor(game.investigation_score)), color = colors.bright},
     })
@@ -176,25 +179,25 @@ function love.update(dt)
             if newest then
                 terminal:addBlank()
                 terminal:addSegments({
-                    {text = "  ╔═══════════════════════════════════════════════╗", color = colors.cyan},
+                    {text = "  +===================================================+", color = colors.cyan},
                 }, true)
                 terminal:addSegments({
-                    {text = "  ║  ", color = colors.cyan},
+                    {text = "  |  ", color = colors.cyan},
                     {text = "NEW MESSAGE", color = colors.bright},
                     {text = " from ", color = colors.dim},
                     {text = newest.message.from, color = newest.message.from == "UNKNOWN TERMINAL" and colors.amber or colors.text},
                 }, true)
                 terminal:addSegments({
-                    {text = "  ║  ", color = colors.cyan},
+                    {text = "  |  ", color = colors.cyan},
                     {text = "Subject: ", color = colors.dim},
                     {text = newest.message.subject, color = colors.text},
                 }, true)
                 terminal:addSegments({
-                    {text = "  ║  ", color = colors.cyan},
+                    {text = "  |  ", color = colors.cyan},
                     {text = "Type INBOX to view. READ MSG " .. #game.inbox .. " to read.", color = colors.dim},
                 }, true)
                 terminal:addSegments({
-                    {text = "  ╚═══════════════════════════════════════════════╝", color = colors.cyan},
+                    {text = "  +===================================================+", color = colors.cyan},
                 }, true)
                 terminal:addBlank(true)
             end
@@ -214,7 +217,7 @@ function love.update(dt)
                 terminal:addSegments({{text = line_data.text, color = line_data.color}})
             end
             terminal:addBlank()
-            terminal:addSegments({{text = "  ══════════════════════════════════════════════════", color = colors.border}})
+            terminal:addSegments({{text = "  ======================================================", color = colors.border}})
             terminal:addBlank()
             terminal:addSegments({{text = "  ASHLINE", color = colors.bright}})
             terminal:addSegments({{text = "  A terminal narrative by Copilot & You", color = colors.dim}})
@@ -226,7 +229,7 @@ function love.update(dt)
             terminal:addBlank()
             terminal:addSegments({{text = "  Thank you for playing.", color = colors.bright}})
             terminal:addBlank()
-            terminal:addSegments({{text = "  ══════════════════════════════════════════════════", color = colors.border}})
+            terminal:addSegments({{text = "  ======================================================", color = colors.border}})
 
             ending_done = true
             terminal:showInput(false)

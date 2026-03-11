@@ -23,20 +23,21 @@ function boot.getSequence()
         {delay = 0.15, segments = {{text = "Connecting to SILO-NET...", color = colors.text}}},
         {delay = 0.2, segments = {{text = "  Node 31 authenticated.  Encryption: AES-MERIDIAN", color = colors.dim}}},
         {delay = 0.1, segments = {}},
-        {delay = 0.2, segments = {{text = "╔══════════════════════════════════════════════════════════╗", color = colors.border}}},
-        {delay = 0.05, segments = {{text = "║                                                          ║", color = colors.border}}},
+        {delay = 0.2, segments = {{text = "+============================================================+", color = colors.border}}},
+        {delay = 0.05, segments = {{text = "|                                                            |", color = colors.border}}},
         {delay = 0.05, segments = {
-            {text = "║    ", color = colors.border},
+            {text = "|    ", color = colors.border},
             {text = "A S H L I N E", color = colors.bright},
-            {text = "   Terminal Operating System       ║", color = colors.border},
+            {text = "   Terminal Operating System       ", color = colors.border},
+            {text = "|", color = colors.border},
         }},
         {delay = 0.05, segments = {
-            {text = "║    ", color = colors.border},
+            {text = "|    ", color = colors.border},
             {text = "Silo Meridian  |  Terminal ARC-7  |  2071.03.14", color = colors.text},
-            {text = "  ║", color = colors.border},
+            {text = "  |", color = colors.border},
         }},
-        {delay = 0.05, segments = {{text = "║                                                          ║", color = colors.border}}},
-        {delay = 0.05, segments = {{text = "╚══════════════════════════════════════════════════════════╝", color = colors.border}}},
+        {delay = 0.05, segments = {{text = "|                                                            |", color = colors.border}}},
+        {delay = 0.05, segments = {{text = "+============================================================+", color = colors.border}}},
         {delay = 0.2, segments = {}},
         {delay = 0.1, segments = {
             {text = "  Operator:    ", color = colors.dim},
@@ -66,7 +67,7 @@ function boot.getSequence()
         {delay = 0.2, segments = {}},
         {delay = 0.05, segments = {{text = "  Session initialized. Type HELP for available commands.", color = colors.text}}},
         {delay = 0.05, segments = {}},
-        {delay = 0.0, segments = {{text = "────────────────────────────────────────────────────────────", color = colors.border}}},
+        {delay = 0.0, segments = {{text = "============================================================", color = colors.border}}},
     }
 end
 

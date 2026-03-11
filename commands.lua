@@ -47,7 +47,7 @@ local function dim_line(text)
 end
 
 local function separator()
-    return {seg("────────────────────────────────────────────────────────────", colors.border)}
+    return {seg("============================================================", colors.border)}
 end
 
 local function format_record_header(id, record)
@@ -508,56 +508,56 @@ function handlers.COMPARE(game, args)
     table.insert(out, separator())
     table.insert(out, blank())
 
-    table.insert(out, {seg("  ┌─ " .. id1 .. " ─────────────────────────────────", colors.cyan)})
+    table.insert(out, {seg("  +-- " .. id1 .. " -----------------------------------", colors.cyan)})
     table.insert(out, {
-        seg("  │ ", colors.cyan),
+        seg("  | ", colors.cyan),
         seg(r1.title, colors.header),
     })
     table.insert(out, {
-        seg("  │ ", colors.cyan),
+        seg("  | ", colors.cyan),
         seg("Date: " .. r1.date .. "  |  By: " .. r1.filed_by, colors.dim),
     })
-    table.insert(out, {seg("  │", colors.cyan)})
+    table.insert(out, {seg("  |", colors.cyan)})
     for _, text in ipairs(r1.content) do
         if text ~= "" then
-            table.insert(out, {seg("  │ " .. text, colors.text)})
+            table.insert(out, {seg("  | " .. text, colors.text)})
         else
-            table.insert(out, {seg("  │", colors.cyan)})
+            table.insert(out, {seg("  |", colors.cyan)})
         end
     end
-    table.insert(out, {seg("  └──────────────────────────────────────────────", colors.cyan)})
+    table.insert(out, {seg("  +----------------------------------------------", colors.cyan)})
 
     table.insert(out, blank())
 
-    table.insert(out, {seg("  ┌─ " .. id2 .. " ─────────────────────────────────", colors.amber)})
+    table.insert(out, {seg("  +-- " .. id2 .. " -----------------------------------", colors.amber)})
     table.insert(out, {
-        seg("  │ ", colors.amber),
+        seg("  | ", colors.amber),
         seg(r2.title, colors.header),
     })
     table.insert(out, {
-        seg("  │ ", colors.amber),
+        seg("  | ", colors.amber),
         seg("Date: " .. r2.date .. "  |  By: " .. r2.filed_by, colors.dim),
     })
-    table.insert(out, {seg("  │", colors.amber)})
+    table.insert(out, {seg("  |", colors.amber)})
     for _, text in ipairs(r2.content) do
         if text ~= "" then
-            table.insert(out, {seg("  │ " .. text, colors.text)})
+            table.insert(out, {seg("  | " .. text, colors.text)})
         else
-            table.insert(out, {seg("  │", colors.amber)})
+            table.insert(out, {seg("  |", colors.amber)})
         end
     end
-    table.insert(out, {seg("  └──────────────────────────────────────────────", colors.amber)})
+    table.insert(out, {seg("  +----------------------------------------------", colors.amber)})
 
     table.insert(out, blank())
 
     -- auto-analysis for certain comparisons
     local analysis = commands.getComparisonAnalysis(id1, id2)
     if analysis then
-        table.insert(out, {seg("  ╔═ DISCREPANCY ANALYSIS ════════════════════════", colors.classified)})
+        table.insert(out, {seg("  +== DISCREPANCY ANALYSIS ===========================", colors.classified)})
         for _, text in ipairs(analysis) do
-            table.insert(out, {seg("  ║ " .. text, colors.amber)})
+            table.insert(out, {seg("  | " .. text, colors.amber)})
         end
-        table.insert(out, {seg("  ╚═════════════════════════════════════════════════", colors.classified)})
+        table.insert(out, {seg("  +=================================================", colors.classified)})
     end
 
     table.insert(out, separator())
@@ -618,31 +618,31 @@ function handlers.TRACE(game, args)
         table.insert(out, {seg("  Source: Primary Aquifer (Sector 6)", colors.text)})
         table.insert(out, {seg("  Total output: 12,400 L/day", colors.text)})
         table.insert(out, blank())
-        table.insert(out, {seg("  ┌─ AQUIFER ─────────────────────────────────", colors.cyan)})
-        table.insert(out, {seg("  │", colors.cyan)})
-        table.insert(out, {seg("  ├── WTR-V6-01 → Sector 1:    1,420 L/day", colors.text)})
-        table.insert(out, {seg("  ├── WTR-V6-02 → Sector 2:    3,100 L/day", colors.text)})
-        table.insert(out, {seg("  ├── WTR-V6-03 → Sector 3:    4,200 L/day", colors.text)})
-        table.insert(out, {seg("  ├── WTR-V6-04 → Sector 4:      980 L/day", colors.text)})
-        table.insert(out, {seg("  ├── WTR-V6-05 → Sector 5:    1,850 L/day", colors.text)})
-        table.insert(out, {seg("  ├── WTR-V6-06 → Sector 6:      520 L/day", colors.text)})
-        table.insert(out, {seg("  ├── WTR-V6-07 → Sector 7:      410 L/day", colors.text)})
-        table.insert(out, {seg("  ├── WTR-V6-08 → Sector 8:      680 L/day", colors.text)})
+        table.insert(out, {seg("  +-- AQUIFER -----------------------------------------", colors.cyan)})
+        table.insert(out, {seg("  |", colors.cyan)})
+        table.insert(out, {seg("  |-- WTR-V6-01 > Sector 1:    1,420 L/day", colors.text)})
+        table.insert(out, {seg("  |-- WTR-V6-02 > Sector 2:    3,100 L/day", colors.text)})
+        table.insert(out, {seg("  |-- WTR-V6-03 > Sector 3:    4,200 L/day", colors.text)})
+        table.insert(out, {seg("  |-- WTR-V6-04 > Sector 4:      980 L/day", colors.text)})
+        table.insert(out, {seg("  |-- WTR-V6-05 > Sector 5:    1,850 L/day", colors.text)})
+        table.insert(out, {seg("  |-- WTR-V6-06 > Sector 6:      520 L/day", colors.text)})
+        table.insert(out, {seg("  |-- WTR-V6-07 > Sector 7:      410 L/day", colors.text)})
+        table.insert(out, {seg("  |-- WTR-V6-08 > Sector 8:      680 L/day", colors.text)})
         table.insert(out, {
-            seg("  ├── WTR-V6-09 → Sector 9:        ", colors.text),
+            seg("  |-- WTR-V6-09 > Sector 9:        ", colors.text),
             seg("0 L/day [SEALED]", colors.amber),
         })
         table.insert(out, {
-            seg("  │   └── ", colors.cyan),
+            seg("  |   +-- ", colors.cyan),
             seg("LINE S9-A: 847.3 L/day [ANOMALY]", colors.red),
         })
         table.insert(out, {
-            seg("  │       └── ", colors.cyan),
+            seg("  |       +-- ", colors.cyan),
             seg("Via bypass valve WTR-BV-09 (undocumented)", colors.classified),
         })
-        table.insert(out, {seg("  ├── WTR-V6-10 → Sector 10:     240 L/day", colors.text)})
-        table.insert(out, {seg("  ├── WTR-V6-11 → Sector 11:     190 L/day", colors.text)})
-        table.insert(out, {seg("  └── WTR-V6-12 → Sector 12:     330 L/day", colors.text)})
+        table.insert(out, {seg("  |-- WTR-V6-10 > Sector 10:     240 L/day", colors.text)})
+        table.insert(out, {seg("  |-- WTR-V6-11 > Sector 11:     190 L/day", colors.text)})
+        table.insert(out, {seg("  +-- WTR-V6-12 > Sector 12:     330 L/day", colors.text)})
         table.insert(out, blank())
         table.insert(out, {
             seg("  Documented total: ", colors.dim),
@@ -764,7 +764,7 @@ function handlers.AUTHORIZE(game, args)
 
     local ending = game:executeAction(id)
     if ending then
-        table.insert(out, {seg("  ═══ AUTHORIZATION CONFIRMED ═══", colors.bright)})
+        table.insert(out, {seg("  === AUTHORIZATION CONFIRMED ===", colors.bright)})
     end
     table.insert(out, separator())
     return out
