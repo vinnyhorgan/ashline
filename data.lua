@@ -1092,7 +1092,7 @@ data.actions = {
         requirements = {flags = {"sera_contact"}},
         effects = {
             flags = {"annex_meds_authorized"},
-            metrics = {audit_risk = 1, strain = 2, mercy = 2},
+            metrics = {audit_risk = 1, strain = 2, mercy = 2, complicity = 1},
         },
         result = {
             "The order cleared under silent corridor rules.",

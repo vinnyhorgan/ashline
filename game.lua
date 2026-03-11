@@ -150,9 +150,12 @@ function Game:onPersonnelViewed(person_id)
 end
 
 function Game:onSearchPerformed(keyword)
-    table.insert(self.searches_performed, keyword)
+    local normalized = (keyword or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
+    if normalized == "" then return end
+    if self.searches_performed[normalized] then return end
+    self.searches_performed[normalized] = true
     self.proof_score = self.proof_score + 0.25
-    self:checkTriggers("search:" .. keyword:lower())
+    self:checkTriggers("search:" .. normalized)
 end
 
 function Game:onComparisonMade(id1, id2)

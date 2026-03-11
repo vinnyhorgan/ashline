@@ -43,6 +43,11 @@ local function countTable(t)
     return n
 end
 
+local function toggleFullscreen()
+    local is_fullscreen = love.window.getFullscreen()
+    love.window.setFullscreen(not is_fullscreen, "desktop")
+end
+
 function love.load()
     love.keyboard.setKeyRepeat(true)
 
@@ -308,7 +313,12 @@ function love.textinput(text)
     sound:click()
 end
 
-function love.keypressed(key)
+function love.keypressed(key, scancode, isrepeat)
+    if not isrepeat and (key == "return" or key == "kpenter") and (love.keyboard.isDown("lalt") or love.keyboard.isDown("ralt")) then
+        toggleFullscreen()
+        return
+    end
+
     if game.phase == "boot" then
         if key == "return" or key == "space" then
             -- skip boot
@@ -347,7 +357,7 @@ function love.keypressed(key)
         return
     end
 
-    if key == "return" then
+    if key == "return" and not isrepeat then
         executeCommand()
     elseif key == "backspace" then
         if input_cursor > 0 then
@@ -372,7 +382,7 @@ function love.keypressed(key)
     elseif key == "end" then
         input_cursor = #input_text
         updateInput()
-    elseif key == "tab" then
+    elseif key == "tab" and not isrepeat then
         local completed = commands.applyCompletion(input_text, game)
         if completed ~= input_text then
             input_text = completed
@@ -403,7 +413,7 @@ function love.keypressed(key)
         terminal:scrollUp(5)
     elseif key == "pagedown" then
         terminal:scrollDown(5)
-    elseif key == "escape" then
+    elseif key == "escape" and not isrepeat then
         input_text = ""
         input_cursor = 0
         updateInput()

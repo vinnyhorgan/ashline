@@ -21,6 +21,12 @@ for id in pairs(data.personnel) do
 end
 table.sort(PERSONNEL_IDS)
 
+local OVERRIDE_TOKENS = {}
+for token in pairs(data.overrides) do
+    table.insert(OVERRIDE_TOKENS, token)
+end
+table.sort(OVERRIDE_TOKENS)
+
 local SYSTEM_NAMES = {"WATER", "POWER", "AIR", "POPULATION"}
 local LIST_CATEGORIES = {"INCIDENTS", "MAINTENANCE", "DIRECTIVES", "WITNESS", "ALL"}
 
@@ -980,6 +986,19 @@ function commands.getCompletions(input, game)
         for _, category in ipairs(LIST_CATEGORIES) do
             if #partial == 0 or category:sub(1, #partial) == partial then
                 table.insert(matches, category)
+            end
+        end
+        return matches
+    end
+
+    if cmd == "OVERRIDE" and (#parts == 1 or (#parts == 2 and not input:find("%s$"))) then
+        local matches = {}
+        local partial = #parts >= 2 and parts[2] or ""
+        for _, token in ipairs(OVERRIDE_TOKENS) do
+            local allowed = (token == "LANTERN-17" and game.flags.lantern_code_known)
+                or (token == "ASHLINE-NULL" and game.flags.ashline_code_known)
+            if allowed and (#partial == 0 or token:sub(1, #partial) == partial) then
+                table.insert(matches, token)
             end
         end
         return matches
