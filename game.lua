@@ -172,11 +172,14 @@ function Game:updateDerivedState()
     if self.records_read["INC-7288"] or self.flags["mirror_rebuilt"] then alerts = alerts + 1 end
     if self.flags["annex_vault_unlocked"] or self.records_read["DIR-8890"] then alerts = alerts + 1 end
     if self.flags["doctrine_unlocked"] then alerts = alerts + 1 end
+    if self.records_read["INC-7322"] or self.flags["dawn_vault_unlocked"] then alerts = alerts + 1 end
     if self.decisions_unlocked then alerts = alerts + 1 end
     self.alert_count = alerts
 
     if self.phase == "main" then
         if self.decisions_unlocked then
+            self.chapter = 5
+        elseif self.flags["dawn_vault_unlocked"] or self.flags["surface_cache_decoded"] then
             self.chapter = 4
         elseif self.flags["annex_vault_unlocked"] or self.flags["camera_looped"] then
             self.chapter = 3
@@ -221,12 +224,31 @@ function Game:checkTriggers(_context)
         self:queueMessage("MSG-007", 4.0)
     end
 
+    if self.flags["doctrine_unlocked"]
+        and (self.records_read["DIR-9104"] or self.records_read["DIR-9991"])
+        and not self.flags["msg_delivered_MSG-009"] then
+        self:queueMessage("MSG-009", 5.0)
+    end
+
+    if self.flags["dawn_prompt"]
+        and (self.records_read["INC-7322"] or self.records_read["MLOG-EXT-4401"])
+        and not self.flags["msg_delivered_MSG-012"] then
+        self:queueMessage("MSG-012", 4.0)
+    end
+
     self.decisions_unlocked = self.flags["doctrine_unlocked"]
+        and self.flags["dawn_vault_unlocked"]
         and self.flags["model_generated"]
+        and self.flags["surface_model_generated"]
+        and self.flags["surface_cache_decoded"]
         and self.flags["camera_looped"]
         and self.records_read["DIR-9104"]
         and self.records_read["DIR-9991"]
         and self.records_read["INC-7316"]
+        and self.records_read["DIR-8700"]
+        and self.records_read["DIR-9408"]
+        and self.records_read["INC-6117"]
+        and self.records_read["INC-7336"]
 
     self:updateDerivedState()
 end
@@ -355,9 +377,17 @@ end
 function Game:getObjectives()
     if self.decisions_unlocked then
         return {
-            "Read DIR-9104, DIR-9991, and INC-7316 if you have not already.",
+            "Read any remaining annex or dawn files before you choose.",
             "Use ACTIONS to review the final authorization set.",
-            "Choose what A-17, and the rest of Meridian, are worth to you.",
+            "Choose what A-17, the silo, and the sky are worth to you.",
+        }
+    end
+
+    if self.flags["dawn_vault_unlocked"] or self.flags["surface_cache_decoded"] then
+        return {
+            "Read the DAWN branch files and decide what the surface truth means.",
+            "Run ACT-108 so the cost of disclosure is explicit, not imagined.",
+            "Finish any unread annex evidence before the final choice set opens.",
         }
     end
 
@@ -366,6 +396,15 @@ function Game:getObjectives()
             "Finish reading the black-vault doctrine and liquidation files.",
             "Run the ration model if you have not authorized ACT-104.",
             "Prepare a live proof channel from A-17 if you have not authorized ACT-105.",
+            "Follow the new DAWN references into external survey records.",
+        }
+    end
+
+    if self.flags["dawn_prompt"] then
+        return {
+            "Search the external logs around West Mast 4 and DAWN.",
+            "Find what the continuity branch was hiding above the silo.",
+            "Expect the second truth to be worse, not cleaner.",
         }
     end
 

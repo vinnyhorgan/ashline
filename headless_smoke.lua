@@ -52,10 +52,13 @@ local function build_final_state(include_meds)
         "READ MLOG-MED-1220",
         "READ INC-7021",
         "READ MLOG-AIR-4412",
+        "READ INC-7322",
+        "READ MLOG-EXT-4401",
         "SEARCH lantern",
         "SEARCH lantern",
         "PERSONNEL CIV-0119",
         "PERSONNEL CIV-0177",
+        "PERSONNEL CIV-0412",
     }
 
     for _, command in ipairs(early_commands) do
@@ -101,6 +104,34 @@ local function build_final_state(include_meds)
     exec(game, "READ DIR-9104")
     exec(game, "READ DIR-9991")
     exec(game, "READ INC-7316")
+    exec(game, "READ MLOG-SRF-2003")
+
+    flush_messages(game, 10)
+    read_all_messages(game)
+    flush_messages(game, 10)
+    read_all_messages(game)
+
+    exec(game, "TRACE EXTERNAL")
+    exec(game, "INSPECT EXTERNAL")
+    exec(game, "COMPARE INC-7322 MLOG-EXT-4401")
+    exec(game, "AUTHORIZE ACT-106")
+    exec(game, "AUTHORIZE ACT-107")
+
+    flush_messages(game, 10)
+    read_all_messages(game)
+
+    exec(game, "OVERRIDE DAWN-GATE")
+    exec(game, "READ INC-6117")
+    exec(game, "READ DIR-8700")
+    exec(game, "READ DIR-9408")
+    exec(game, "READ WIT-412-A")
+    exec(game, "READ WIT-940-A")
+    exec(game, "PERSONNEL CIV-0515")
+    exec(game, "COMPARE INC-6117 DIR-8700")
+    exec(game, "COMPARE DIR-9408 WIT-940-A")
+    exec(game, "COMPARE INC-6117 WIT-412-A")
+    exec(game, "AUTHORIZE ACT-108")
+    exec(game, "READ INC-7336")
     exec(game, "ACTIONS")
 
     assert_true(game.decisions_unlocked, "final decisions should be unlocked")

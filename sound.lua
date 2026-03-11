@@ -17,6 +17,36 @@ function Sound.new()
     return self
 end
 
+function Sound:applyVolumes()
+    if not self.loaded then return end
+    for _, src in ipairs(self.clicks) do
+        src:setVolume(self.ui_volume * self.master_volume)
+    end
+    for _, src in ipairs(self.errors) do
+        src:setVolume(self.ui_volume * self.master_volume)
+    end
+    for _, src in ipairs(self.success) do
+        src:setVolume(self.ui_volume * self.master_volume * 0.7)
+    end
+    for _, src in ipairs(self.hums) do
+        src:setVolume(self.ambient_volume * self.master_volume)
+    end
+    for _, src in ipairs(self.tension) do
+        src:setVolume(self.tension_volume * self.master_volume)
+    end
+    if self.ambient_source then
+        self.ambient_source:setVolume(self.ambient_volume * self.master_volume)
+    end
+end
+
+function Sound:setMix(master, ui, ambient, tension)
+    if master ~= nil then self.master_volume = master end
+    if ui ~= nil then self.ui_volume = ui end
+    if ambient ~= nil then self.ambient_volume = ambient end
+    if tension ~= nil then self.tension_volume = tension end
+    self:applyVolumes()
+end
+
 function Sound:load()
     local dir = "term_ui_sounds/"
     for i = 1, 27 do

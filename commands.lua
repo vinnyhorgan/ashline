@@ -27,7 +27,7 @@ for token in pairs(data.overrides) do
 end
 table.sort(OVERRIDE_TOKENS)
 
-local SYSTEM_NAMES = {"WATER", "POWER", "AIR", "POPULATION"}
+local SYSTEM_NAMES = {"WATER", "POWER", "AIR", "POPULATION", "EXTERNAL"}
 local LIST_CATEGORIES = {"INCIDENTS", "MAINTENANCE", "DIRECTIVES", "WITNESS", "ALL"}
 
 local function seg(text, color)
@@ -142,8 +142,8 @@ function handlers.HELP(_game, _args)
         {"LIST [category]",     "List records by type"},
         {"PERSONNEL <id>",      "View a personnel file"},
         {"COMPARE <id1> <id2>", "Compare two records"},
-        {"INSPECT <system>",    "Inspect water, power, air, or population"},
-        {"TRACE <resource>",    "Trace water, power, air, or population flow"},
+        {"INSPECT <system>",    "Inspect water, power, air, population, or external"},
+        {"TRACE <resource>",    "Trace water, power, air, population, or external flow"},
         {"OVERRIDE <token>",    "Use a discovered override token"},
         {"AUTHORIZE <act-id>",  "Execute an available action"},
         {"DENY <act-id>",       "Deny an action without executing it"},
@@ -220,7 +220,7 @@ function handlers.STATUS(game, _args)
     table.insert(out, separator())
     table.insert(out, blank())
 
-    local systems = {"water", "power", "air", "population"}
+    local systems = {"water", "power", "air", "population", "external"}
     for _, key in ipairs(systems) do
         local sys = data.systems[key]
         local status_color = colors.bright
@@ -268,8 +268,14 @@ function handlers.ALERTS(game, _args)
     if game.records_read["INC-7021"] then
         table.insert(alerts, {"INC-7021", "Dormant air branch consuming live scrubber mass", "PRIORITY-2"})
     end
+    if game.records_read["INC-7322"] then
+        table.insert(alerts, {"INC-7322", "External mast reporting clean interval before forced suppression", "PRIORITY-2"})
+    end
     if game.flags["annex_vault_unlocked"] then
         table.insert(alerts, {"DIR-8890", "Annex occupancy suppression order confirmed", "DIRECTIVE BREACH"})
+    end
+    if game.flags["dawn_vault_unlocked"] then
+        table.insert(alerts, {"DIR-8700", "Surface-fatality narrative confirmed as partial lie", "DIRECTIVE BREACH"})
     end
     if game.decisions_unlocked then
         table.insert(alerts, {"FINAL", "A terminal decision is now available", "IMMEDIATE"})
@@ -587,13 +593,13 @@ end
 
 function handlers.INSPECT(_game, args)
     if not args or #args == 0 then
-        return {line("  ERROR: Usage: INSPECT <system> (water/power/air/population)", colors.red)}
+        return {line("  ERROR: Usage: INSPECT <system> (water/power/air/population/external)", colors.red)}
     end
 
     local key = args[1]:lower()
     local sys = data.systems[key]
     if not sys then
-        return {line("  ERROR: Unknown system '" .. args[1] .. "'.", colors.red)}
+        return {line("  ERROR: Unknown system '" .. args[1] .. "'. Available: water, power, air, population, external", colors.red)}
     end
 
     local out = {}
@@ -623,7 +629,7 @@ end
 
 function handlers.TRACE(game, args)
     if not args or #args == 0 then
-        return {line("  ERROR: Usage: TRACE <resource> (water/power/air/population)", colors.red)}
+        return {line("  ERROR: Usage: TRACE <resource> (water/power/air/population/external)", colors.red)}
     end
 
     local resource = args[1]:lower()
@@ -674,8 +680,19 @@ function handlers.TRACE(game, args)
         table.insert(out, {seg("  Branch tag recovered: LANTERN", colors.amber)})
         table.insert(out, blank())
         game:onSearchPerformed("trace population")
+    elseif resource == "external" or resource == "ext" or resource == "surface" then
+        table.insert(out, separator())
+        table.insert(out, header_line("  EXTERNAL ACCESS TRACE"))
+        table.insert(out, separator())
+        table.insert(out, blank())
+        table.insert(out, {seg("  West Mast 4: dormant on public maps, heartbeat current on hidden line", colors.text)})
+        table.insert(out, {seg("  Suppressor mask: D-DAWN-4", colors.amber)})
+        table.insert(out, {seg("  Recent event: clean-signal interval detected before forced channel closure", colors.text)})
+        table.insert(out, {seg("  Shaft servo: maintained despite retirement order", colors.text)})
+        table.insert(out, blank())
+        game:onSearchPerformed("trace external")
     else
-        return {line("  ERROR: Unknown resource. Available: water, power, air, population", colors.red)}
+        return {line("  ERROR: Unknown resource. Available: water, power, air, population, external", colors.red)}
     end
 
     table.insert(out, separator())
@@ -893,6 +910,36 @@ function commands.getComparisonAnalysis(id1, id2)
             "",
             "A weak threat became a durable doctrine because fear was useful.",
         },
+        ["INC-6117:DIR-8700"] = {
+            "Team Kestrel found a brief breathable interval on the surface.",
+            "DIR-8700 orders the public to be told the surface is uniformly fatal.",
+            "",
+            "The lie is strategic, not evidentiary.",
+        },
+        ["DIR-9408:WIT-940-A"] = {
+            "DIR-9408 treats annex children as a future obedient surface cohort.",
+            "Lio Venn's lesson slate tries to prepare them for truth instead of obedience.",
+            "",
+            "The Directorate saw inventory. The teacher saw people.",
+        },
+        ["INC-7322:MLOG-EXT-4401"] = {
+            "The incident file catches a clean interval at West Mast 4.",
+            "The maintenance log shows the mast asking for power repeatedly.",
+            "",
+            "Dead infrastructure does not time its own heartbeat.",
+        },
+        ["INC-6117:WIT-412-A"] = {
+            "The formal loss report measures a breathable interval and buries it in classification.",
+            "Mara Quill's voice packet says outright that the surface is 'not dead all the time.'",
+            "",
+            "Telemetry became doctrine only after the dangerous part was removed: hope.",
+        },
+        ["DIR-8700:DIR-9408"] = {
+            "DIR-8700 suppresses knowledge of the sky to prevent public ascent pressure.",
+            "DIR-9408 quietly reserves a future ascent option for annex children only.",
+            "",
+            "The regime did not reject the sky. It privatized it.",
+        },
     }
 
     return analyses[key] or analyses[rkey]
@@ -997,6 +1044,7 @@ function commands.getCompletions(input, game)
         for _, token in ipairs(OVERRIDE_TOKENS) do
             local allowed = (token == "LANTERN-17" and game.flags.lantern_code_known)
                 or (token == "ASHLINE-NULL" and game.flags.ashline_code_known)
+                or (token == "DAWN-GATE" and game.flags.dawn_code_known)
             if allowed and (#partial == 0 or token:sub(1, #partial) == partial) then
                 table.insert(matches, token)
             end
