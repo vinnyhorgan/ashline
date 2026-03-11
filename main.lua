@@ -696,15 +696,17 @@ local function drawTitleScreen(w, h)
     local menu_y = top + 200
     local menu_w = 340
     local item_spacing = 40
-    local menu_pad = 18
     local menu_header = 38
-    local menu_h = menu_header + menu_pad + (#title_options * item_spacing) + menu_pad
+    local item_block = (#title_options - 1) * item_spacing + 32
+    local menu_content = item_block + 40
+    local menu_h = menu_header + menu_content
     drawPanel(menu_x, menu_y, menu_w, menu_h, "TERMINAL ACCESS", colors.header)
 
     love.graphics.setFont(font)
     if title_index > #title_options then title_index = #title_options end
+    local item_top = menu_y + menu_header + math.floor((menu_content - item_block) / 2) + 6
     for i, option in ipairs(title_options) do
-        local iy = menu_y + menu_header + menu_pad + (i - 1) * item_spacing + 4
+        local iy = item_top + (i - 1) * item_spacing
         drawMenuOption(menu_x + 12, iy, menu_w - 24, option, i == title_index)
     end
 
@@ -713,7 +715,7 @@ local function drawTitleScreen(w, h)
     local right_x = menu_x + menu_w + 24
     local right_y = menu_y
     local right_w = w - right_x - 88
-    local right_h = math.max(menu_h, 340)
+    local right_h = math.max(menu_h, 380)
     drawPanel(right_x, right_y, right_w, right_h, "SELECTION DOSSIER", colors.amber)
 
     local ry = right_y + 50
@@ -768,59 +770,69 @@ local function drawTitleScreen(w, h)
 
     -- Flavor text (bottom-right corner of dossier)
     love.graphics.setColor(colors.dim)
-    love.graphics.print("Read closely.", right_x + right_w - 160, right_y + right_h - 56)
-    love.graphics.print("Compare often.", right_x + right_w - 160, right_y + right_h - 36)
+    love.graphics.print("Read closely.", right_x + right_w - 160, right_y + right_h - 62)
+    love.graphics.print("Compare often.", right_x + right_w - 160, right_y + right_h - 42)
 
     -- Session info section
     love.graphics.setColor(colors.border)
-    love.graphics.rectangle("fill", right_x + 20, right_y + right_h - 68, right_w - 40, 1)
+    love.graphics.rectangle("fill", right_x + 20, right_y + right_h - 76, right_w - 40, 1)
     love.graphics.setFont(font_bold)
     love.graphics.setColor(colors.header)
-    love.graphics.print("SESSION", right_x + 20, right_y + right_h - 54)
+    love.graphics.print("SESSION", right_x + 20, right_y + right_h - 62)
 
     local meta = Save.getMetadata()
     if meta then
         love.graphics.setColor(colors.cyan)
-        love.graphics.print("AUTOSAVE DETECTED", right_x + 112, right_y + right_h - 54)
+        love.graphics.print("AUTOSAVE DETECTED", right_x + 112, right_y + right_h - 62)
         love.graphics.setFont(font)
         love.graphics.setColor(colors.text)
-        love.graphics.print(tostring(meta.saved_at or "UNKNOWN"), right_x + 20, right_y + right_h - 30)
+        love.graphics.print(tostring(meta.saved_at or "UNKNOWN"), right_x + 20, right_y + right_h - 36)
         love.graphics.setColor(colors.dim)
-        love.graphics.print("CHAPTER " .. tostring(meta.chapter or "UNKNOWN"), right_x + 340, right_y + right_h - 30)
+        love.graphics.print("CHAPTER " .. tostring(meta.chapter or "UNKNOWN"), right_x + 340, right_y + right_h - 36)
     else
         love.graphics.setFont(font)
         love.graphics.setColor(colors.dim)
-        love.graphics.print("No autosave present.", right_x + 112, right_y + right_h - 54)
+        love.graphics.print("No autosave present.", right_x + 112, right_y + right_h - 62)
     end
 
     -- ══════ ATMOSPHERIC DETAILS ══════
 
-    -- Clearance bar (between panels and footer)
     local atm_y = math.max(menu_y + menu_h, right_y + right_h) + 20
     love.graphics.setFont(font)
-    love.graphics.setColor(colors.very_dim)
+    love.graphics.setColor(colors.dim)
     love.graphics.print("CLEARANCE: NIGHT OPERATOR", left + 4, atm_y)
-    love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.3)
+    love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.35)
     love.graphics.rectangle("fill", left + 280, atm_y + 8, w - left - 280 - 88, 1)
-    love.graphics.setColor(colors.very_dim)
+    love.graphics.setColor(colors.dim)
     love.graphics.print("ARCHIVE STATUS: SEALED", w - 310, atm_y)
 
     -- ══════ FOOTER ══════
 
-    -- Footer separator
     love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.35)
     love.graphics.rectangle("fill", 78, h - 58, w - 156, 1)
 
     love.graphics.setFont(font)
+    love.graphics.setColor(colors.text)
+    love.graphics.print("Up/Down", left + 4, h - 42)
     love.graphics.setColor(colors.dim)
-    love.graphics.print("Up/Down navigate", left + 4, h - 42)
-    love.graphics.setColor(colors.very_dim)
-    love.graphics.print("Enter select", left + 200, h - 42)
-    love.graphics.setColor(colors.very_dim)
-    love.graphics.print("Escape quit", left + 350, h - 42)
+    love.graphics.print("navigate", left + 82, h - 42)
 
-    love.graphics.setColor(colors.cyan)
-    love.graphics.print("made with <3 by vinny", w - 252, h - 42)
+    love.graphics.setColor(colors.text)
+    love.graphics.print("Enter", left + 190, h - 42)
+    love.graphics.setColor(colors.dim)
+    love.graphics.print("select", left + 248, h - 42)
+
+    love.graphics.setColor(colors.text)
+    love.graphics.print("Esc", left + 340, h - 42)
+    love.graphics.setColor(colors.dim)
+    love.graphics.print("quit", left + 378, h - 42)
+
+    love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.4)
+    love.graphics.print("|", left + 170, h - 42)
+    love.graphics.print("|", left + 324, h - 42)
+
+    love.graphics.setColor(colors.dim)
+    love.graphics.printf("made with <3 by vinny", 78, h - 42, w - 176, "right")
 
     if save_notice_timer > 0 and #save_notice > 0 then
         love.graphics.setColor(colors.amber)
