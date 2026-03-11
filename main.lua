@@ -515,12 +515,12 @@ local function drawTitleScreen(w, h)
         560
     )
 
-    local quote_y = top + 148
+    local quote_y = top + 150
     love.graphics.setColor(colors.cyan)
     love.graphics.printf('"Every buried population eventually learns to count the hands that buried it."', left + 4, quote_y, 580)
 
     local menu_x = 96
-    local menu_y = 292
+    local menu_y = 308
     local menu_w = 340
     local menu_h = 96 + (#title_options * 36)
     drawPanel(menu_x, menu_y, menu_w, menu_h, "TERMINAL ACCESS", colors.header)
@@ -532,9 +532,9 @@ local function drawTitleScreen(w, h)
     end
 
     local right_x = 478
-    local right_y = 216
+    local right_y = 262
     local right_w = 706
-    local right_h = 304
+    local right_h = 248
     drawPanel(right_x, right_y, right_w, right_h, "SHIFT BRIEF", colors.amber)
 
     love.graphics.setFont(font_bold)
@@ -556,20 +556,22 @@ local function drawTitleScreen(w, h)
     )
 
     local meta = Save.getMetadata()
-    drawPanel(right_x, 548, right_w, 118, "SESSION RECOVERY", colors.cyan)
+    drawPanel(right_x, 542, right_w, 110, "SESSION RECOVERY", colors.cyan)
     if meta then
         love.graphics.setColor(colors.cyan)
-        love.graphics.print("Autosave detected", right_x + 20, 606)
+        love.graphics.print("Autosave detected", right_x + 20, 596)
         love.graphics.setColor(colors.text)
-        love.graphics.print("Saved at: " .. tostring(meta.saved_at or "UNKNOWN"), right_x + 20, 632)
-        love.graphics.print("Chapter:  " .. tostring(meta.chapter or "UNKNOWN"), right_x + 320, 632)
+        love.graphics.print("Saved at: " .. tostring(meta.saved_at or "UNKNOWN"), right_x + 20, 620)
+        love.graphics.print("Chapter:  " .. tostring(meta.chapter or "UNKNOWN"), right_x + 320, 620)
     else
         love.graphics.setColor(colors.dim)
-        love.graphics.print("No autosave present. A new session will create one after boot.", right_x + 20, 620)
+        love.graphics.print("No autosave present. A new session will create one after boot.", right_x + 20, 608)
     end
 
     love.graphics.setColor(colors.dim)
     love.graphics.print("Up/Down navigate  Enter select  Escape quit", left + 4, h - 42)
+    love.graphics.setColor(colors.cyan)
+    love.graphics.print("made with <3 by vinny", w - 252, h - 42)
     if save_notice_timer > 0 and #save_notice > 0 then
         love.graphics.setColor(colors.amber)
         love.graphics.print(save_notice, left + 4, h - 68)
@@ -945,8 +947,11 @@ function love.draw()
     end
 
     if settings.post_effects and effect then
+        love.graphics.setColor(1, 1, 1, 1)
         effect(draw_content)
+        love.graphics.setColor(1, 1, 1, 1)
     else
+        love.graphics.setColor(1, 1, 1, 1)
         draw_content()
     end
 end
