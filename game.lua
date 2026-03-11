@@ -31,6 +31,46 @@ local function normalize_code(code)
     return code
 end
 
+local function copy_map(source)
+    local out = {}
+    for key, value in pairs(source or {}) do
+        if type(value) == "table" then
+            local nested = {}
+            for k, v in pairs(value) do
+                nested[k] = v
+            end
+            out[key] = nested
+        else
+            out[key] = value
+        end
+    end
+    return out
+end
+
+local function copy_array(source)
+    local out = {}
+    for i, value in ipairs(source or {}) do
+        if type(value) == "table" then
+            local nested = {}
+            for k, v in pairs(value) do
+                if type(v) == "table" then
+                    local nested2 = {}
+                    for k2, v2 in pairs(v) do
+                        nested2[k2] = v2
+                    end
+                    nested[k] = nested2
+                else
+                    nested[k] = v
+                end
+            end
+            out[i] = nested
+        else
+            out[i] = value
+        end
+    end
+    return out
+end
+
 function Game.new()
     local self = setmetatable({}, Game)
     self.phase = "boot"
@@ -53,6 +93,41 @@ function Game.new()
     self.complicity = 0
     self.chapter = 1
     self.decisions_unlocked = false
+    return self
+end
+
+function Game.fromSnapshot(snapshot)
+    local self = Game.new()
+    snapshot = snapshot or {}
+
+    self.phase = snapshot.phase or "main"
+    self.flags = copy_map(snapshot.flags)
+    self.inbox = copy_array(snapshot.inbox)
+    self.records_read = copy_map(snapshot.records_read)
+    self.personnel_viewed = copy_map(snapshot.personnel_viewed)
+    self.searches_performed = copy_map(snapshot.searches_performed)
+    self.comparisons_made = copy_map(snapshot.comparisons_made)
+    self.actions_taken = copy_map(snapshot.actions_taken)
+    self.game_time = snapshot.game_time or 0
+    self.ending = snapshot.ending
+    self.message_timers = copy_map(snapshot.message_timers)
+    self.proof_score = snapshot.proof_score or 0
+    self.audit_risk = snapshot.audit_risk or 0
+    self.strain = snapshot.strain or 0
+    self.mercy = snapshot.mercy or 0
+    self.complicity = snapshot.complicity or 0
+    self.chapter = snapshot.chapter or 1
+    self.decisions_unlocked = snapshot.decisions_unlocked or false
+
+    self.unread_count = 0
+    for _, entry in ipairs(self.inbox) do
+        if not entry.read then
+            self.unread_count = self.unread_count + 1
+        end
+    end
+
+    self:checkTriggers("load")
+    self:updateDerivedState()
     return self
 end
 
@@ -451,6 +526,29 @@ function Game:getStats()
         mercy = self.mercy,
         complicity = self.complicity,
         records = count_true(self.records_read),
+    }
+end
+
+function Game:serialize()
+    return {
+        phase = self.phase,
+        flags = copy_map(self.flags),
+        inbox = copy_array(self.inbox),
+        records_read = copy_map(self.records_read),
+        personnel_viewed = copy_map(self.personnel_viewed),
+        searches_performed = copy_map(self.searches_performed),
+        comparisons_made = copy_map(self.comparisons_made),
+        actions_taken = copy_map(self.actions_taken),
+        game_time = self.game_time,
+        ending = self.ending,
+        message_timers = copy_map(self.message_timers),
+        proof_score = self.proof_score,
+        audit_risk = self.audit_risk,
+        strain = self.strain,
+        mercy = self.mercy,
+        complicity = self.complicity,
+        chapter = self.chapter,
+        decisions_unlocked = self.decisions_unlocked,
     }
 end
 

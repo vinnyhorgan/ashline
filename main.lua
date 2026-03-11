@@ -7,6 +7,7 @@ local boot = require("boot")
 local commands = require("commands")
 local data = require("data")
 local Settings = require("settings")
+local Save = require("save")
 
 local VIRTUAL_W = 1280
 local VIRTUAL_H = 800
@@ -70,6 +71,9 @@ local SETTINGS_OPTIONS = {
     {label = "Back", kind = "action"},
 }
 
+local save_notice = ""
+local save_notice_timer = 0
+
 local function countTable(t)
     local n = 0
     for _ in pairs(t) do n = n + 1 end
@@ -83,6 +87,61 @@ local function resetInputState()
     history_index = 0
     last_unread = 0
     notification_timer = 0
+end
+
+local function getTitleOptions()
+    local options = {}
+    if Save.exists() then
+        table.insert(options, "CONTINUE SESSION")
+    end
+    table.insert(options, "NEW SESSION")
+    table.insert(options, "SETTINGS")
+    table.insert(options, "QUIT")
+    return options
+end
+
+local function setSaveNotice(text, duration)
+    save_notice = text or ""
+    save_notice_timer = duration or 4.0
+end
+
+local function buildSavePayload()
+    local saved_at = os.date and os.date("%Y-%m-%d %H:%M:%S") or "UNKNOWN"
+    return {
+        saved_at = saved_at,
+        app = {
+            input_text = input_text,
+            input_cursor = input_cursor,
+            command_history = command_history,
+            history_index = history_index,
+        },
+        game = game and game:serialize() or nil,
+    }
+end
+
+local function autosaveGame()
+    if not game or (game.phase ~= "main" and game.phase ~= "ending") then
+        return false
+    end
+
+    local ok, err = Save.save(nil, buildSavePayload())
+    if not ok then
+        setSaveNotice("SAVE FAILED: " .. tostring(err), 5.0)
+        return false
+    end
+    return true
+end
+
+local function restoreTerminalForSession(message)
+    terminal:clear()
+    terminal:setGhost("")
+    terminal:setTypewriterSpeed(settings.text_speed)
+    terminal:addBlank(true)
+    terminal:addSegments({{text = "  +===================================================+", color = colors.cyan}}, true)
+    terminal:addSegments({{text = "  |  " .. message, color = colors.bright}}, true)
+    terminal:addSegments({{text = "  |  Type TASKS to reorient. INBOX shows pending threads.", color = colors.dim}}, true)
+    terminal:addSegments({{text = "  +===================================================+", color = colors.cyan}}, true)
+    terminal:addBlank(true)
 end
 
 local function updateInput()
@@ -223,6 +282,7 @@ end
 
 local function startSession()
     resetInputState()
+    Save.delete()
     game = Game.new()
 
     terminal:clear()
@@ -243,7 +303,42 @@ local function startSession()
     updateStatus()
 end
 
+local function continueSession()
+    local payload, source = Save.load()
+    if not payload or not payload.game then
+        setSaveNotice("No valid save could be restored.", 5.0)
+        return
+    end
+
+    resetInputState()
+    game = Game.fromSnapshot(payload.game)
+
+    if payload.app then
+        command_history = payload.app.command_history or {}
+        history_index = payload.app.history_index or (#command_history + 1)
+    else
+        history_index = 1
+    end
+    input_text = ""
+    input_cursor = 0
+
+    boot_done = true
+    boot_index = #boot_sequence
+    boot_timer = 0
+    ending_displayed = false
+    ending_done = false
+    app_state = "game"
+
+    terminal:showInput(game.phase == "main")
+    restoreTerminalForSession(source == "backup" and "SESSION RESTORED FROM BACKUP SAVE" or "SESSION RESTORED")
+    updateHeader()
+    updateStatus()
+    updateInput()
+    setSaveNotice(source == "backup" and "Primary save was damaged. Backup restored." or "Session restored.", 4.0)
+end
+
 local function returnToTitle()
+    autosaveGame()
     app_state = "title"
     title_index = 1
     pause_index = 1
@@ -320,7 +415,9 @@ local function drawTitleScreen()
     love.graphics.print("TERMINAL ACCESS", menu_x + 18, menu_y + 18)
 
     love.graphics.setFont(font)
-    for i, option in ipairs(TITLE_OPTIONS) do
+    local title_options = getTitleOptions()
+    if title_index > #title_options then title_index = #title_options end
+    for i, option in ipairs(title_options) do
         local selected = i == title_index
         love.graphics.setColor(selected and colors.bright or colors.text)
         love.graphics.print((selected and "> " or "  ") .. option, menu_x + 22, menu_y + 54 + (i - 1) * 30)
@@ -337,9 +434,21 @@ local function drawTitleScreen()
     love.graphics.print("Average target length: ~2 hours", right_x + 18, right_y + 54)
     love.graphics.print("Keyboard only. Read closely. Compare often.", right_x + 18, right_y + 82)
     love.graphics.print("Alt+Enter toggles fullscreen at any time.", right_x + 18, right_y + 110)
+    local meta = Save.getMetadata()
+    if meta then
+        love.graphics.setColor(colors.cyan)
+        love.graphics.print("Autosave: " .. tostring(meta.saved_at or "UNKNOWN"), right_x + 18, right_y + 138)
+    else
+        love.graphics.setColor(colors.dim)
+        love.graphics.print("No autosave present.", right_x + 18, right_y + 138)
+    end
 
     love.graphics.setColor(colors.dim)
     love.graphics.print("Up/Down navigate  Enter select", left + 4, h - 48)
+    if save_notice_timer > 0 and #save_notice > 0 then
+        love.graphics.setColor(colors.amber)
+        love.graphics.print(save_notice, left + 4, h - 74)
+    end
 end
 
 local function formatSettingValue(option)
@@ -493,6 +602,7 @@ local function executeCommand()
     input_cursor = 0
     updateInput()
     updateHeader()
+    autosaveGame()
     sound:click()
 end
 
@@ -524,8 +634,10 @@ local function adjustSetting(direction)
 end
 
 local function selectTitleOption()
-    local option = TITLE_OPTIONS[title_index]
-    if option == "NEW SESSION" then
+    local option = getTitleOptions()[title_index]
+    if option == "CONTINUE SESSION" then
+        continueSession()
+    elseif option == "NEW SESSION" then
         startSession()
     elseif option == "SETTINGS" then
         openSettings("title")
@@ -575,6 +687,7 @@ function love.load()
     ensureEffect()
     applySettings(false)
     sound:startAmbient()
+    boot_sequence = boot.getSequence()
 end
 
 function love.update(dt)
@@ -600,6 +713,7 @@ function love.update(dt)
                     updateHeader()
                     updateStatus()
                     updateInput()
+                    autosaveGame()
                     break
                 end
             else
@@ -617,6 +731,7 @@ function love.update(dt)
             notification_timer = 4.0
             sound:chime()
             updateHeader()
+            autosaveGame()
 
             local newest = game.inbox[#game.inbox]
             if newest then
@@ -672,15 +787,21 @@ function love.update(dt)
                 ending_done = true
                 terminal:showInput(false)
                 sound:playTension()
+                autosaveGame()
             end
         end
 
         if notification_timer > 0 then
             notification_timer = notification_timer - dt
         end
+        if save_notice_timer > 0 then
+            save_notice_timer = math.max(0, save_notice_timer - dt)
+        end
 
         terminal:update(dt)
         updateStatus()
+    elseif save_notice_timer > 0 then
+        save_notice_timer = math.max(0, save_notice_timer - dt)
     end
 end
 
@@ -739,11 +860,12 @@ function love.keypressed(key, scancode, isrepeat)
     end
 
     if app_state == "title" then
+        local title_options = getTitleOptions()
         if key == "up" and not isrepeat then
-            title_index = ((title_index - 2) % #TITLE_OPTIONS) + 1
+            title_index = ((title_index - 2) % #title_options) + 1
             sound:click()
         elseif key == "down" and not isrepeat then
-            title_index = (title_index % #TITLE_OPTIONS) + 1
+            title_index = (title_index % #title_options) + 1
             sound:click()
         elseif (key == "return" or key == "kpenter") and not isrepeat then
             sound:click()
@@ -810,6 +932,7 @@ function love.keypressed(key, scancode, isrepeat)
             updateHeader()
             updateStatus()
             updateInput()
+            autosaveGame()
         elseif key == "escape" and not isrepeat then
             returnToTitle()
         end
@@ -917,5 +1040,6 @@ function love.wheelmoved(_, y)
 end
 
 function love.quit()
+    autosaveGame()
     saveSettings()
 end

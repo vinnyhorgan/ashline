@@ -2,6 +2,7 @@ package.path = "./?.lua;" .. package.path
 
 local Game = require("game")
 local commands = require("commands")
+local Save = require("save")
 
 local function assert_true(value, message)
     if not value then
@@ -146,6 +147,47 @@ local function verify_ending(action_id, expected_ending, include_meds)
     return true
 end
 
+local function verify_save_roundtrip()
+    local slot = "__ashline_test"
+    Save.delete(slot)
+
+    local game = build_final_state(true)
+    local payload = {
+        saved_at = "test",
+        app = {
+            input_text = "READ INC-7301",
+            input_cursor = 13,
+            command_history = {"HELP", "READ INC-7301"},
+            history_index = 3,
+        },
+        game = game:serialize(),
+    }
+
+    local ok, err = Save.save(slot, payload)
+    assert_true(ok, "save should succeed: " .. tostring(err))
+
+    local loaded, source = Save.load(slot)
+    assert_true(source == "current" or source == "backup", "expected valid save source")
+    assert_true(loaded.game.phase == payload.game.phase, "loaded save should preserve phase")
+    assert_true(loaded.game.flags.doctrine_unlocked == true, "loaded save should preserve flags")
+
+    local backup_ok, backup_err = Save.save(slot, payload)
+    assert_true(backup_ok, "second save should succeed: " .. tostring(backup_err))
+
+    local current_path = slot .. ".save.json"
+    local file = io.open(current_path, "wb")
+    assert_true(file ~= nil, "should be able to corrupt current save")
+    file:write("{corrupt")
+    file:close()
+
+    local recovered, recovered_source = Save.load(slot)
+    assert_true(recovered ~= nil, "backup recovery should succeed")
+    assert_true(recovered_source == "backup", "expected backup recovery source")
+    assert_true(recovered.game.flags.dawn_vault_unlocked == true, "backup should preserve deep progress")
+
+    Save.delete(slot)
+end
+
 local function run()
     local game = Game.new()
     game:start()
@@ -160,6 +202,7 @@ local function run()
     verify_ending("ACT-203", "controlled_disclosure", false)
     verify_ending("ACT-204", "open_broadcast", false)
     verify_ending("ACT-205", "ashline_doctrine", true)
+    verify_save_roundtrip()
 
     print("headless smoke: ok")
 end
