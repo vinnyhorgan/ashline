@@ -7,10 +7,14 @@ local boot = require("boot")
 local commands = require("commands")
 local data = require("data")
 
+local VIRTUAL_W = 1280
+local VIRTUAL_H = 800
+
 local terminal
 local game
 local sound
 local effect
+local render_canvas
 local font, font_bold
 
 local input_text = ""
@@ -45,7 +49,7 @@ function love.load()
     font = love.graphics.newFont("ibm_plex_mono/IBMPlexMono-Regular.ttf", 15)
     font_bold = love.graphics.newFont("ibm_plex_mono/IBMPlexMono-Bold.ttf", 15)
 
-    terminal = Terminal.new(font, font_bold)
+    terminal = Terminal.new(font, font_bold, VIRTUAL_W, VIRTUAL_H)
 
     game = Game.new()
 
@@ -55,7 +59,9 @@ function love.load()
 
     terminal.on_click = function() sound:click() end
 
-    effect = moonshine(moonshine.effects.scanlines)
+    render_canvas = love.graphics.newCanvas(VIRTUAL_W, VIRTUAL_H)
+
+    effect = moonshine(VIRTUAL_W, VIRTUAL_H, moonshine.effects.scanlines)
         .chain(moonshine.effects.crt)
         .chain(moonshine.effects.glow)
         .chain(moonshine.effects.vignette)
@@ -247,20 +253,24 @@ function love.update(dt)
 end
 
 function love.draw()
-    -- sync dimensions every frame for robust resize handling
-    local w, h = love.graphics.getDimensions()
-    if w ~= terminal.width or h ~= terminal.height then
-        terminal:resize(w, h)
-        effect.resize(w, h)
-    end
+    -- render at virtual resolution to canvas
+    love.graphics.setCanvas(render_canvas)
+    love.graphics.clear()
     effect(function()
         terminal:render()
     end)
+    love.graphics.setCanvas()
+
+    -- scale canvas to fill window
+    local w, h = love.graphics.getDimensions()
+    local sx = w / VIRTUAL_W
+    local sy = h / VIRTUAL_H
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.draw(render_canvas, 0, 0, 0, sx, sy)
 end
 
 function love.resize(w, h)
-    terminal:resize(w, h)
-    effect.resize(w, h)
+    -- nothing to do: virtual resolution stays fixed
 end
 
 function love.textinput(text)

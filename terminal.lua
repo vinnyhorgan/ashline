@@ -84,16 +84,15 @@ local function wrap_segments(segments, cols)
     return lines
 end
 
-function Terminal.new(font, font_bold)
+function Terminal.new(font, font_bold, width, height)
     local self = setmetatable({}, Terminal)
     self.font = font
     self.font_bold = font_bold or font
     self.char_w = font:getWidth("A")
     self.char_h = font:getHeight()
 
-    local ww, wh = love.graphics.getDimensions()
-    self.width = ww
-    self.height = wh
+    self.width = width or love.graphics.getWidth()
+    self.height = height or love.graphics.getHeight()
     self:recalcLayout()
 
     self.displayed_raw = {}
