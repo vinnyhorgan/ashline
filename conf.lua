@@ -1,13 +1,15 @@
 function love.conf(t)
+    local Display = require("display")
+
     t.identity = "ashline"
     t.version = "11.5"
     t.console = false
 
     t.window.title = "ASHLINE"
-    t.window.width = 1280
-    t.window.height = 800
-    t.window.minwidth = 800
-    t.window.minheight = 500
+    t.window.width = Display.window_w
+    t.window.height = Display.window_h
+    t.window.minwidth = Display.min_window_w
+    t.window.minheight = Display.min_window_h
     t.window.resizable = true
     t.window.vsync = 1
 
