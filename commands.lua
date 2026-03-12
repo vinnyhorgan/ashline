@@ -277,6 +277,27 @@ function handlers.ALERTS(game, _args)
     if game.flags["dawn_vault_unlocked"] then
         table.insert(alerts, {"DIR-8700", "Surface-fatality narrative confirmed as partial lie", "DIRECTIVE BREACH"})
     end
+    if game.records_read["INC-7295"] then
+        table.insert(alerts, {"INC-7295", "Parasitic power draw on retired feeder RF-A17", "PRIORITY-2"})
+    end
+    if game.records_read["INC-7300"] then
+        table.insert(alerts, {"INC-7300", "Thermal variance in sealed corridor C-2 exceeds ambient range", "PRIORITY-2"})
+    end
+    if game.records_read["INC-6410"] then
+        table.insert(alerts, {"INC-6410", "Annex respiratory outbreak; medical response denied", "PRIORITY-1"})
+    end
+    if game.records_read["INC-5820"] then
+        table.insert(alerts, {"INC-5820", "Selection Protocol political compliance weighting exposed", "PRIORITY-3"})
+    end
+    if game.flags["construction_lead"] then
+        table.insert(alerts, {"WIT-099-A", "Construction-era concealed volumes confirmed pre-designed", "PRIORITY-2"})
+    end
+    if game.records_read["DIR-9200"] then
+        table.insert(alerts, {"DIR-9200", "Cross-silo hidden populations confirmed in 4+ facilities", "DIRECTIVE BREACH"})
+    end
+    if game.records_read["INC-6120"] then
+        table.insert(alerts, {"INC-6120", "Pre-activation survey proves Directorate knew surface viable", "DIRECTIVE BREACH"})
+    end
     if game.decisions_unlocked then
         table.insert(alerts, {"FINAL", "A terminal decision is now available", "IMMEDIATE"})
     end
@@ -939,6 +960,120 @@ function commands.getComparisonAnalysis(id1, id2)
             "DIR-9408 quietly reserves a future ascent option for annex children only.",
             "",
             "The regime did not reject the sky. It privatized it.",
+        },
+        ["INC-7295:MLOG-PWR-4410"] = {
+            "INC-7295 flags a parasitic load on a feeder that should carry nothing.",
+            "MLOG-PWR-4410 shows those taps were placed by someone who knew the routing grid.",
+            "",
+            "This was not accidental leakage. It was professional concealment of life support.",
+        },
+        ["INC-7300:MLOG-ANN-0007"] = {
+            "Thermal imaging finds body heat behind a wall that should be cold.",
+            "The ingress power test confirms bunks and living space behind that same wall.",
+            "",
+            "The heat is not anomalous. It is sixty-four people breathing.",
+        },
+        ["INC-7310:INC-7288"] = {
+            "Archive suppression has been actively maintained for eleven years.",
+            "The population checksum mismatch hides behind that same suppression.",
+            "",
+            "Someone has been gardening the data to keep the hidden branch invisible.",
+        },
+        ["MLOG-FOOD-4415:DIR-4012"] = {
+            "64 anonymous ration events labelled CANTEEN-ZERO appear daily.",
+            "The triage ladder explicitly denies standing to unregistered persons.",
+            "",
+            "The food proves they exist. The policy says they do not.",
+        },
+        ["MLOG-SEC-4420:MLOG-SEC-6001"] = {
+            "Present-day camera feeds are looped to hide movement near A-17.",
+            "The 2060 arrest log shows detention orders written 48 hours before the protest.",
+            "",
+            "Security has been managing this lie from both ends of the timeline.",
+        },
+        ["WIT-555-A:INC-6550"] = {
+            "The Lantern Assembly asked for an elected council and resource audits.",
+            "The disturbance report frames these same people as destabilizers.",
+            "",
+            "Their reasonable demands were rewritten as security threats to justify disappearance.",
+        },
+        ["INC-6200:MLOG-WTR-4408"] = {
+            "740 liters per day were rerouted away from public supply before Lantern.",
+            "The water draw on A-17 began after they were relocated there.",
+            "",
+            "First they took the water. Then they used the shortage as a weapon.",
+        },
+        ["WIT-099-A:DIR-1010"] = {
+            "Renn's testimony proves sealed habitable volumes were built before Lantern.",
+            "The MERIDIAN charter itself provides for 'dissent reduction infrastructure.'",
+            "",
+            "The cage was designed before the crime. The silo was built to disappear people.",
+        },
+        ["INC-5820:INC-6402"] = {
+            "The Selection Protocol weighted for political compliance, not survival fitness.",
+            "The relocation order moved Lantern Assembly members into sealed annex.",
+            "",
+            "The lottery was never random. The disappearances were never temporary.",
+        },
+        ["MLOG-ANN-0012:MLOG-ANN-0018"] = {
+            "The classroom log shows what the children are forbidden to learn.",
+            "The birth registry shows children identified by code, not name.",
+            "",
+            "They are being raised without sky, without names, without the words for what was stolen.",
+        },
+        ["WIT-308-B:WIT-308-A"] = {
+            "Ten years ago, Elsa asked why a 48-hour isolation needed nursery supplies.",
+            "Now she calls the annex 'the close sky' and refuses to leave.",
+            "",
+            "She understood the lie on night one. By year ten, she had become its mother.",
+        },
+        ["DIR-5050:DIR-4980"] = {
+            "Long-term disposition includes 'phase reduction' — controlled starvation.",
+            "Calm-ash keeps them docile enough not to notice the thinning.",
+            "",
+            "They are being chemically quieted while being slowly starved. Each policy enables the other.",
+        },
+        ["INC-6410:WIT-084-A"] = {
+            "Seven people died including two children when medical response was denied.",
+            "Dr. Sera's notes describe calm-ash as causing developmental damage.",
+            "",
+            "The compound makes them sick. When they get sick, they are denied treatment.",
+        },
+        ["WIT-VEY-001:WIT-VEY-002"] = {
+            "In the official memo, Vey justifies inheriting the annex as a stability measure.",
+            "In the margin note, she admits she knows it is wrong and is afraid.",
+            "",
+            "Fear looks like conviction from the outside. On the inside, it looks like this.",
+        },
+        ["DIR-9200:DIR-8700"] = {
+            "Four or more silos maintain hidden populations. Silo 9 refused and was destroyed.",
+            "DIR-8700 suppresses knowledge that the surface is not uniformly lethal.",
+            "",
+            "They are hiding people from the sky and the sky from people, across every facility.",
+        },
+        ["MLOG-EXT-4405:INC-6117"] = {
+            "Surface material analysis finds living soil, pollen, and beetle chitin.",
+            "Team Kestrel found breathable intervals years before this sample.",
+            "",
+            "The surface has been recovering for longer than anyone inside has been told.",
+        },
+        ["INC-6120:DIR-8700"] = {
+            "Team Sparrow surveyed the surface before the silo was sealed and found it viable.",
+            "DIR-8700 orders the public told the surface is uniformly fatal.",
+            "",
+            "They did not discover the lie later. They built the silo on top of it.",
+        },
+        ["MLOG-PWR-4410:MLOG-ANN-0007"] = {
+            "Marek Sorn's power routing shows professional unauthorized taps on retired feeders.",
+            "The ingress power test confirms those feeders supply 64 bunks and a classroom.",
+            "",
+            "A sanitation porter has been keeping the lights on for hidden children for eleven years.",
+        },
+        ["INC-6200:INC-6550"] = {
+            "Water was being rerouted away from public supply before the Lantern protests.",
+            "The Lantern Assembly demanded resource audits — exactly what would have exposed the rerouting.",
+            "",
+            "The protest was not about ideology. It was about to find the missing water.",
         },
     }
 

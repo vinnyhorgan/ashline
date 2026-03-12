@@ -56,11 +56,30 @@ local function build_final_state(include_meds)
         "READ MLOG-AIR-4412",
         "READ INC-7322",
         "READ MLOG-EXT-4401",
+        "READ INC-7295",
+        "READ INC-7300",
+        "READ INC-7310",
+        "READ MLOG-PWR-4410",
+        "READ MLOG-FOOD-4415",
+        "READ MLOG-SEC-4420",
+        "READ WIT-555-A",
+        "READ INC-6200",
+        "READ MLOG-SEC-6001",
+        "READ WIT-099-A",
+        "READ DIR-1010",
+        "READ INC-5820",
         "SEARCH lantern",
         "SEARCH lantern",
         "PERSONNEL CIV-0119",
         "PERSONNEL CIV-0177",
         "PERSONNEL CIV-0412",
+        "PERSONNEL CIV-0099",
+        "PERSONNEL CIV-0333",
+        "PERSONNEL CIV-0007",
+        "PERSONNEL CIV-0027",
+        "COMPARE INC-7295 MLOG-PWR-4410",
+        "COMPARE WIT-099-A DIR-1010",
+        "COMPARE MLOG-SEC-4420 MLOG-SEC-6001",
     }
 
     for _, command in ipairs(early_commands) do
@@ -89,15 +108,24 @@ local function build_final_state(include_meds)
     exec(game, "READ WIT-621-A")
     exec(game, "READ DIR-4012")
     exec(game, "READ WIT-214-A")
+    exec(game, "READ MLOG-ANN-0012")
+    exec(game, "READ MLOG-ANN-0018")
+    exec(game, "READ WIT-308-B")
+    exec(game, "READ DIR-5050")
+    exec(game, "READ INC-6410")
+    exec(game, "READ WIT-VEY-001")
     exec(game, "COMPARE INC-6402 DIR-8890")
     exec(game, "COMPARE DIR-4980 WIT-084-A")
     exec(game, "COMPARE WIT-621-A DIR-8890")
+    exec(game, "COMPARE MLOG-ANN-0012 MLOG-ANN-0018")
+    exec(game, "COMPARE INC-6410 WIT-084-A")
 
     flush_messages(game, 10)
     read_all_messages(game)
 
     exec(game, "AUTHORIZE ACT-104")
     exec(game, "AUTHORIZE ACT-105")
+    exec(game, "AUTHORIZE ACT-109")
 
     flush_messages(game, 10)
     read_all_messages(game)
@@ -107,6 +135,10 @@ local function build_final_state(include_meds)
     exec(game, "READ DIR-9991")
     exec(game, "READ INC-7316")
     exec(game, "READ MLOG-SRF-2003")
+    exec(game, "READ DIR-9200")
+    exec(game, "READ WIT-VEY-002")
+    exec(game, "COMPARE WIT-VEY-001 WIT-VEY-002")
+    exec(game, "COMPARE DIR-9200 DIR-8700")
 
     flush_messages(game, 10)
     read_all_messages(game)
@@ -128,10 +160,14 @@ local function build_final_state(include_meds)
     exec(game, "READ DIR-9408")
     exec(game, "READ WIT-412-A")
     exec(game, "READ WIT-940-A")
+    exec(game, "READ MLOG-EXT-4405")
+    exec(game, "READ INC-6120")
     exec(game, "PERSONNEL CIV-0515")
     exec(game, "COMPARE INC-6117 DIR-8700")
     exec(game, "COMPARE DIR-9408 WIT-940-A")
     exec(game, "COMPARE INC-6117 WIT-412-A")
+    exec(game, "COMPARE MLOG-EXT-4405 INC-6117")
+    exec(game, "COMPARE INC-6120 DIR-8700")
     exec(game, "AUTHORIZE ACT-108")
     exec(game, "READ INC-7336")
     exec(game, "ACTIONS")

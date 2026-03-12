@@ -265,6 +265,10 @@ function Game:updateDerivedState()
     if self.flags["doctrine_unlocked"] then alerts = alerts + 1 end
     if self.records_read["INC-7322"] or self.flags["dawn_vault_unlocked"] then alerts = alerts + 1 end
     if self.decisions_unlocked then alerts = alerts + 1 end
+    if self.records_read["INC-7295"] or self.records_read["INC-7300"] then alerts = alerts + 1 end
+    if self.records_read["INC-6410"] then alerts = alerts + 1 end
+    if self.flags["msg_delivered_MSG-015"] then alerts = alerts + 1 end
+    if self.flags["construction_lead"] then alerts = alerts + 1 end
     self.alert_count = alerts
 
     if self.phase == "main" then
@@ -325,6 +329,43 @@ function Game:checkTriggers(_context)
         and (self.records_read["INC-7322"] or self.records_read["MLOG-EXT-4401"])
         and not self.flags["msg_delivered_MSG-012"] then
         self:queueMessage("MSG-012", 4.0)
+    end
+
+    -- Audit risk warning when access pattern gets heavy
+    if self.audit_risk >= 3 and not self.flags["msg_delivered_MSG-014"] then
+        self:queueMessage("MSG-014", 8.0)
+    end
+
+    -- Drenn warning after reading security-related annex records
+    local security_reads = 0
+    if self.records_read["MLOG-SEC-4420"] then security_reads = security_reads + 1 end
+    if self.records_read["MLOG-SEC-6001"] then security_reads = security_reads + 1 end
+    if self.records_read["INC-7310"] then security_reads = security_reads + 1 end
+    if security_reads >= 2 and not self.flags["msg_delivered_MSG-015"] then
+        self:queueMessage("MSG-015", 7.0)
+    end
+
+    -- Previous operator warning after reading 10+ records
+    if count_true(self.records_read) >= 10 and not self.flags["msg_delivered_MSG-016"] then
+        self:queueMessage("MSG-016", 12.0)
+    end
+
+    -- Naima personal message after manifold override
+    if self.actions_taken["ACT-101"] and not self.flags["msg_delivered_MSG-017"] then
+        self:queueMessage("MSG-017", 10.0)
+    end
+
+    -- Vey direct threat after doctrine is unlocked
+    if self.flags["doctrine_unlocked"]
+        and self.records_read["DIR-9104"]
+        and not self.flags["msg_delivered_MSG-019"] then
+        self:queueMessage("MSG-019", 8.0)
+    end
+
+    -- Jonas construction discovery after reading both WIT-099-A and DIR-1010
+    if self.records_read["WIT-099-A"] and self.records_read["DIR-1010"]
+        and not self.flags["msg_delivered_MSG-020"] then
+        self:queueMessage("MSG-020", 6.0)
     end
 
     self.decisions_unlocked = compute_decisions_unlocked(self)
@@ -463,18 +504,18 @@ function Game:getObjectives()
 
     if self.flags["dawn_vault_unlocked"] or self.flags["surface_cache_decoded"] then
         return {
-            "Read the DAWN branch files and decide what the surface truth means.",
+            "Read the DAWN branch files — someone knew the surface was alive.",
             "Run ACT-108 so the cost of disclosure is explicit, not imagined.",
-            "Finish any unread annex evidence before the final choice set opens.",
+            "Check INC-6120 if you want to know what Meridian knew before sealing.",
         }
     end
 
     if self.flags["doctrine_unlocked"] then
         return {
-            "Finish reading the black-vault doctrine and liquidation files.",
+            "Finish reading the black-vault doctrine files. DIR-9200 links to other silos.",
             "Run the ration model if you have not authorized ACT-104.",
             "Prepare a live proof channel from A-17 if you have not authorized ACT-105.",
-            "Follow the new DAWN references into external survey records.",
+            "Follow the DAWN references into external survey records.",
         }
     end
 
@@ -489,8 +530,8 @@ function Game:getObjectives()
     if self.flags["annex_vault_unlocked"] then
         return {
             "Read the annex suppression records now visible in the branch.",
-            "Review DIR-4012 and WIT-214-A, then read MSG-006 when it arrives.",
-            "If you need deeper truth, find a way below the annex vault.",
+            "INC-6410 documents a medical emergency. Read it if Sera matters to you.",
+            "MLOG-ANN-0018 contains the birth registry. The children have numbers, not names.",
         }
     end
 
