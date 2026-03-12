@@ -601,7 +601,8 @@ function handlers.COMPARE(game, args)
     table.insert(out, {seg("  +-- " .. id1 .. " -----------------------------------", colors.cyan)})
     table.insert(out, {seg("  | " .. r1.title, colors.header)})
     table.insert(out, {seg("  | " .. L("cmd_date"):gsub("^%s+","") .. r1.date .. "  |  " .. L("cmd_filed_by"):gsub("^%s+","") .. r1.filed_by, colors.dim)})
-    for _, text in ipairs(r1.content) do
+    for _, entry in ipairs(r1.content) do
+        local text = type(entry) == "table" and entry.text or entry
         table.insert(out, {seg(text == "" and "  |" or ("  | " .. text), colors.text)})
     end
     table.insert(out, {seg("  +----------------------------------------------", colors.cyan)})
@@ -610,7 +611,8 @@ function handlers.COMPARE(game, args)
     table.insert(out, {seg("  +-- " .. id2 .. " -----------------------------------", colors.amber)})
     table.insert(out, {seg("  | " .. r2.title, colors.header)})
     table.insert(out, {seg("  | " .. L("cmd_date"):gsub("^%s+","") .. r2.date .. "  |  " .. L("cmd_filed_by"):gsub("^%s+","") .. r2.filed_by, colors.dim)})
-    for _, text in ipairs(r2.content) do
+    for _, entry in ipairs(r2.content) do
+        local text = type(entry) == "table" and entry.text or entry
         table.insert(out, {seg(text == "" and "  |" or ("  | " .. text), colors.text)})
     end
     table.insert(out, {seg("  +----------------------------------------------", colors.amber)})
