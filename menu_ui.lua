@@ -19,7 +19,7 @@ local SETTINGS_OPTIONS = {
     {key = "ambient_volume", label = "Ambient Volume", kind = "number", step = 0.05, min = 0, max = 1},
     {key = "tension_volume", label = "Tension Volume", kind = "number", step = 0.05, min = 0, max = 1},
     {key = "text_speed", label = "Text Speed", kind = "enum", values = {60, 120, 180, 300, 600}},
-    {label = "Back", kind = "action"},
+    {label = "Return", kind = "action"},
 }
 
 local function clamp(value, min_value, max_value)
@@ -872,6 +872,18 @@ function MenuUI:drawPanel(x, y, w, h, title, accent, badge)
         love.graphics.setColor(ac[1], ac[2], ac[3], 0.25 + pulse)
         love.graphics.circle("fill", beacon_x, y + math.floor(PANEL_HEADER_H * 0.5), 2)
     end
+
+    local body_top = y + PANEL_HEADER_H
+    local body_h = h - PANEL_HEADER_H
+    if body_h > 0 then
+        local scan_period = 5.5
+        local scan_progress = ((t + x * 0.01) % scan_period) / scan_period
+        local scan_line_y = body_top + body_h * scan_progress
+        love.graphics.setColor(ac[1], ac[2], ac[3], 0.025)
+        love.graphics.rectangle("fill", x + 1, scan_line_y, w - 2, 1)
+        love.graphics.setColor(ac[1], ac[2], ac[3], 0.012)
+        love.graphics.rectangle("fill", x + 1, scan_line_y - 4, w - 2, 8)
+    end
 end
 
 function MenuUI:drawInlineSegments(x, y, segments, active_font)
@@ -993,10 +1005,17 @@ function MenuUI:drawTitleScreen(w, h)
     love.graphics.setColor(self.colors.bright[1], self.colors.bright[2], self.colors.bright[3], 0.12)
     love.graphics.print(title_text, left + 2, top + 2)
     love.graphics.print(title_text, left - 1, top)
+    love.graphics.setColor(0.85, 0.2, 0.15, 0.05)
+    love.graphics.print(title_text, left - 2, top + 1)
+    love.graphics.setColor(0.2, 0.45, 0.85, 0.05)
+    love.graphics.print(title_text, left + 3, top + 1)
     love.graphics.setColor(self.colors.cyan[1], self.colors.cyan[2], self.colors.cyan[3], 0.08 + 0.04 * (0.5 + 0.5 * math.sin(t * 2.2)))
     love.graphics.print(title_text, left + 1, top + 1)
     love.graphics.setColor(self.colors.bright)
     love.graphics.print(title_text, left, top + 1)
+
+    love.graphics.setColor(self.colors.bright[1], self.colors.bright[2], self.colors.bright[3], 0.03 + 0.01 * math.sin(t * 1.5))
+    love.graphics.rectangle("fill", left, top + self.font_title:getHeight() + 2, self.font_title:getWidth("ASHLINE"), math.floor(unit * 0.8))
 
     love.graphics.setFont(self.font)
     love.graphics.setColor(self.colors.dim)
@@ -1147,9 +1166,11 @@ function MenuUI:drawTitleScreen(w, h)
     local credit = "made with <3 by vinny"
     self:drawFooterRow(footer_left_x, footer_right_x, footer_y, self:getTitleHelpSegments(), credit)
 
-    if math.floor(t * 2.2) % 2 == 0 then
-        love.graphics.setColor(self.colors.dim[1], self.colors.dim[2], self.colors.dim[3], 0.5)
-        love.graphics.print("_", footer_left_x - unit * 2, footer_y)
+    local cw = math.max(2, math.floor(self.font:getWidth("A") * 0.55))
+    local ch = self.font:getHeight() - 2
+    if math.floor(t * 2.0) % 2 == 0 then
+        love.graphics.setColor(self.colors.text[1], self.colors.text[2], self.colors.text[3], 0.5)
+        love.graphics.rectangle("fill", footer_left_x - cw - unit, footer_y + 1, cw, ch)
     end
 
     local save_notice = self.get_save_notice()
@@ -1180,7 +1201,7 @@ function MenuUI:drawSettingsScreen(w, h)
 
     love.graphics.setFont(self.font)
     love.graphics.setColor(self.colors.dim)
-    love.graphics.print("Changes apply immediately and persist as JSON.", layout.content_x, layout.subtitle_y)
+    love.graphics.print("Changes take effect immediately.", layout.content_x, layout.subtitle_y)
 
     for i, option in ipairs(SETTINGS_OPTIONS) do
         local item = layout.items[i]
@@ -1202,6 +1223,15 @@ function MenuUI:drawSettingsScreen(w, h)
 
         if option.kind == "number" then
             self:drawVolumeBar(item, self.get_settings()[option.key], selected, text_y, layout.value_pad)
+        elseif option.kind == "bool" then
+            local on = self.get_settings()[option.key]
+            local value_text = on and "ON" or "OFF"
+            if on then
+                love.graphics.setColor(selected and self.colors.cyan or self.colors.text)
+            else
+                love.graphics.setColor(self.colors.very_dim)
+            end
+            love.graphics.printf(value_text, item.x, text_y, item.w - layout.value_pad, "right")
         elseif option.kind ~= "action" then
             love.graphics.setColor(selected and self.colors.cyan or self.colors.dim)
             love.graphics.printf(self:formatSettingValue(option), item.x, text_y, item.w - layout.value_pad, "right")
@@ -1221,6 +1251,13 @@ function MenuUI:drawSettingsScreen(w, h)
     love.graphics.setColor(self.colors.border[1], self.colors.border[2], self.colors.border[3], 0.28)
     love.graphics.rectangle("fill", layout.content_x, layout.hint_rule_y, layout.content_w, 1)
     self:drawFooterRow(layout.content_x, layout.content_x + layout.content_w, layout.hint_y, layout.hint_segments)
+
+    local cw = math.max(2, math.floor(self.font:getWidth("A") * 0.55))
+    local ch = self.font:getHeight() - 2
+    if math.floor(love.timer.getTime() * 2.0) % 2 == 0 then
+        love.graphics.setColor(self.colors.text[1], self.colors.text[2], self.colors.text[3], 0.45)
+        love.graphics.rectangle("fill", layout.content_x - cw - unit, layout.hint_y + 1, cw, ch)
+    end
 end
 
 function MenuUI:drawPauseOverlay(w, h)
