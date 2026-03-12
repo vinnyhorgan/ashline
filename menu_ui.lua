@@ -5,6 +5,7 @@ local locale = require("locale")
 
 local MENU_FRAME_INSET = 78
 local PANEL_HEADER_H = 38
+local TITLE_VERSION_LABEL = "0.1 alpha"
 
 local PAUSE_OPTIONS = {
     "RESUME",
@@ -1061,6 +1062,19 @@ function MenuUI:drawTitleScreen(w, h)
 
     love.graphics.setColor(self.colors.bright[1], self.colors.bright[2], self.colors.bright[3], 0.03 + 0.01 * math.sin(t * 1.5))
     love.graphics.rectangle("fill", left, top + self.font_title:getHeight() + 2, self.font_title:getWidth("ASHLINE"), math.floor(unit * 0.8))
+
+    local version_x = left + self.font_title:getWidth("ASHLINE") + math.floor(unit * 2.2)
+    local version_y = top + self.font_title:getHeight() - self.font:getHeight() - math.floor(unit * 0.15)
+    local version_w = self.font_bold:getWidth(TITLE_VERSION_LABEL) + unit * 2
+    local version_h = self.font:getHeight() + math.floor(unit * 0.7)
+
+    love.graphics.setFont(self.font_bold)
+    love.graphics.setColor(self.colors.soft_cyan[1], self.colors.soft_cyan[2], self.colors.soft_cyan[3], 0.12)
+    love.graphics.rectangle("fill", version_x - unit, version_y - math.floor(unit * 0.35), version_w, version_h)
+    love.graphics.setColor(self.colors.cyan[1], self.colors.cyan[2], self.colors.cyan[3], 0.3)
+    love.graphics.rectangle("line", version_x - unit, version_y - math.floor(unit * 0.35), version_w, version_h)
+    love.graphics.setColor(self.colors.cyan)
+    love.graphics.print(TITLE_VERSION_LABEL, version_x, version_y)
 
     love.graphics.setFont(self.font)
     love.graphics.setColor(self.colors.dim)
