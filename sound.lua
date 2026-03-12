@@ -48,7 +48,7 @@ function Sound:setMix(master, ui, ambient, tension)
 end
 
 function Sound:load()
-    local dir = "term_ui_sounds/"
+    local dir = "assets/sounds/"
     for i = 1, 27 do
         local name = string.format("UI_Terminal_Click_%02d.wav", i)
         local src = love.audio.newSource(dir .. name, "static")

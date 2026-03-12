@@ -1,3 +1,5 @@
+love.filesystem.setRequirePath("lib/?.lua;lib/?/init.lua;" .. love.filesystem.getRequirePath())
+
 local moonshine = require("moonshine")
 local colors = require("colors")
 local Display = require("display")
@@ -489,10 +491,10 @@ function love.load()
     settings = Settings.load()
     last_w, last_h = love.graphics.getDimensions()
 
-    font = love.graphics.newFont("ibm_plex_mono/IBMPlexMono-Regular.ttf", 18)
-    font_bold = love.graphics.newFont("ibm_plex_mono/IBMPlexMono-Bold.ttf", 18)
-    font_large = love.graphics.newFont("ibm_plex_mono/IBMPlexMono-Bold.ttf", 24)
-    font_title = love.graphics.newFont("ibm_plex_mono/IBMPlexMono-Bold.ttf", 42)
+    font = love.graphics.newFont("assets/fonts/IBMPlexMono-Regular.ttf", 18)
+    font_bold = love.graphics.newFont("assets/fonts/IBMPlexMono-Bold.ttf", 18)
+    font_large = love.graphics.newFont("assets/fonts/IBMPlexMono-Bold.ttf", 24)
+    font_title = love.graphics.newFont("assets/fonts/IBMPlexMono-Bold.ttf", 42)
 
     -- Size virtual resolution to fit a 110-column terminal
     local term_cw = font:getWidth("A")
