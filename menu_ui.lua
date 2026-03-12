@@ -152,30 +152,14 @@ function MenuUI:getTitleOptions()
 end
 
 function MenuUI:getTitleOptionMeta(option)
-    if option == "CONTINUE SESSION" then
-        return {
-            code = "ROUTE-01",
-            title = "Resume recovered session",
-            body = "Restore the last validated autosave and return to the active terminal.",
-        }
-    elseif option == "NEW SESSION" then
-        return {
-            code = "ROUTE-02",
-            title = "Initialize fresh terminal",
-            body = "Start from boot and overwrite the current autosave slot.",
-        }
-    elseif option == "SETTINGS" then
-        return {
-            code = "ROUTE-03",
-            title = "Adjust local runtime",
-            body = "Tune fullscreen, effects, audio mix, and text speed.",
-        }
-    end
-
+    local key = option == "CONTINUE SESSION" and "route_01"
+             or option == "NEW SESSION" and "route_02"
+             or option == "SETTINGS" and "route_03"
+             or "route_04"
     return {
-        code = "ROUTE-04",
-        title = "Terminate process",
-        body = "Close the client and leave the archive sealed until the next shift.",
+        code  = locale.t(key .. "_code"),
+        title = locale.t(key .. "_title"),
+        body  = locale.t(key .. "_body"),
     }
 end
 
@@ -315,8 +299,8 @@ function MenuUI:buildTitleLayout(w, h)
     local footer_rule_y = footer_y - math.floor(unit * 2.0)
     local content_top = menu.panel.y + PANEL_HEADER_H + t.panel_pad_y
     local bottom_band_y = menu.panel.y + right_h - t.panel_pad_y - bottom_band_h
-    local flavor_w = self.font:getWidth("Compare often.")
-    local session_min_w = self.font:getWidth("AUTOSAVE DETECTED") + self.font:getWidth("SESSION") + unit * 4
+    local flavor_w = self.font:getWidth(locale.t("dossier_flavor_2"))
+    local session_min_w = self.font:getWidth(locale.t("dossier_autosave")) + self.font:getWidth(locale.t("dossier_session")) + unit * 4
     local session_w = clamp(right_inner_w - flavor_w - unit * 8, session_min_w, right_inner_w)
 
     return {
@@ -1042,7 +1026,7 @@ function MenuUI:drawTitleScreen(w, h)
 
     love.graphics.setFont(self.font_bold)
     love.graphics.setColor(self.colors.cyan)
-    love.graphics.print("MERIDIAN INTERNAL SYSTEM / NIGHT SHIFT", left + 4, top - math.floor(unit * 2.0))
+    love.graphics.print(locale.t("title_header"), left + 4, top - math.floor(unit * 2.0))
 
     love.graphics.setFont(self.font_title)
     local title_text = "ASHLINE"
@@ -1080,13 +1064,13 @@ function MenuUI:drawTitleScreen(w, h)
 
     love.graphics.setFont(self.font)
     love.graphics.setColor(self.colors.dim)
-    love.graphics.print("A terminal investigation about hidden people, buried doctrine,", left + 4, layout.description_y)
-    love.graphics.print("and the price of truth.", left + 4, layout.description_y + layout.description_gap)
+    love.graphics.print(locale.t("title_desc_1"), left + 4, layout.description_y)
+    love.graphics.print(locale.t("title_desc_2"), left + 4, layout.description_y + layout.description_gap)
 
     love.graphics.setColor(self.colors.very_dim)
-    love.graphics.print("Meridian survives by omission.", left + 4, layout.tagline_y)
+    love.graphics.print(locale.t("title_tagline"), left + 4, layout.tagline_y)
 
-    local access_text = "Night shift access point / operator handoff required"
+    local access_text = locale.t("title_access")
     love.graphics.setColor(self.colors.cyan)
     love.graphics.print(access_text, left + 4, layout.access_y)
 
@@ -1097,7 +1081,7 @@ function MenuUI:drawTitleScreen(w, h)
     love.graphics.rectangle("fill", left, layout.separator_y + 1, math.floor(separator_w * 0.64), 1)
 
     love.graphics.setFont(self.font)
-    local signal_text = "SIGNAL LOCKED"
+    local signal_text = locale.t("title_signal")
     local signal_x = w - MENU_FRAME_INSET - unit * 3 - self.font:getWidth(signal_text)
     love.graphics.setColor(self.colors.dim)
     love.graphics.print(signal_text, signal_x, top - math.floor(unit * 2.0))
@@ -1108,7 +1092,7 @@ function MenuUI:drawTitleScreen(w, h)
     love.graphics.setColor(self.colors.very_dim)
     love.graphics.print(os.date("%H:%M:%S"), signal_x, top + math.floor(unit * 0.2))
 
-    self:drawPanel(layout.menu.panel.x, layout.menu.panel.y, layout.menu.panel.w, layout.menu.panel.h, "TERMINAL ACCESS", self.colors.header, "LINKED")
+    self:drawPanel(layout.menu.panel.x, layout.menu.panel.y, layout.menu.panel.w, layout.menu.panel.h, locale.t("title_panel"), self.colors.header, locale.t("title_panel_badge"))
 
     love.graphics.setFont(self.font)
     for i, option in ipairs(title_options) do
@@ -1120,7 +1104,7 @@ function MenuUI:drawTitleScreen(w, h)
     local right_y = layout.right.y
     local right_w = layout.right.w
     local right_h = layout.right.h
-    self:drawPanel(right_x, right_y, right_w, right_h, "SELECTION DOSSIER", self.colors.amber, "LIVE")
+    self:drawPanel(right_x, right_y, right_w, right_h, locale.t("dossier_panel"), self.colors.amber, locale.t("dossier_badge"))
     local inner_x = layout.right.inner_x
     local inner_w = layout.right.inner_w
     local content_y = layout.right.content_top
@@ -1141,7 +1125,7 @@ function MenuUI:drawTitleScreen(w, h)
     love.graphics.setColor(self.colors.amber)
     love.graphics.print(selected_meta.code, inner_x, route_y)
     love.graphics.setColor(self.colors.cyan)
-    love.graphics.print("TARGET: " .. selected_option, inner_x + self.font:getWidth(selected_meta.code) + unit * 2, route_y)
+    love.graphics.print(locale.t("dossier_target") .. ": " .. selected_option, inner_x + self.font:getWidth(selected_meta.code) + unit * 2, route_y)
 
     love.graphics.setFont(self.font_large)
     love.graphics.setColor(self.colors.bright)
@@ -1157,13 +1141,13 @@ function MenuUI:drawTitleScreen(w, h)
 
     love.graphics.setFont(self.font_bold)
     love.graphics.setColor(self.colors.text)
-    love.graphics.print("RUNTIME", inner_x, runtime_heading_y)
+    love.graphics.print(locale.t("dossier_runtime"), inner_x, runtime_heading_y)
     love.graphics.setFont(self.font)
 
     local info_items = {
-        {"Length", "~2 hours"},
-        {"Input", "Keyboard only"},
-        {"Display", "Alt+Enter fullscreen"},
+        {locale.t("runtime_length"), locale.t("runtime_length_val")},
+        {locale.t("runtime_input"), locale.t("runtime_input_val")},
+        {locale.t("runtime_display"), locale.t("runtime_display_val")},
     }
     local info_label_w = self:measureMaxWidth(info_items, self.font, function(item)
         return item[1]
@@ -1193,12 +1177,12 @@ function MenuUI:drawTitleScreen(w, h)
     love.graphics.setFont(self.font_bold)
     love.graphics.setColor(self.colors.header)
     local session_title_y = session_y + tokens.block_gap
-    love.graphics.print("SESSION", session_x, session_title_y)
+    love.graphics.print(locale.t("dossier_session"), session_x, session_title_y)
 
     local meta = self.get_save_metadata()
     if meta then
         love.graphics.setColor(self.colors.cyan)
-        love.graphics.print("AUTOSAVE DETECTED", session_x + self.font_bold:getWidth("SESSION") + unit * 3, session_title_y)
+        love.graphics.print(locale.t("dossier_autosave"), session_x + self.font_bold:getWidth(locale.t("dossier_session")) + unit * 3, session_title_y)
         love.graphics.setFont(self.font)
         love.graphics.setColor(self.colors.text)
         local session_detail_y = session_title_y + self.font_bold:getHeight() + tokens.block_gap
@@ -1209,12 +1193,12 @@ function MenuUI:drawTitleScreen(w, h)
     else
         love.graphics.setFont(self.font)
         love.graphics.setColor(self.colors.dim)
-        love.graphics.print("No autosave present.", session_x + self.font_bold:getWidth("SESSION") + unit * 3, session_title_y)
+        love.graphics.print(locale.t("dossier_no_save"), session_x + self.font_bold:getWidth(locale.t("dossier_session")) + unit * 3, session_title_y)
     end
 
     love.graphics.setColor(self.colors.dim)
-    love.graphics.print("Read closely.", flavor_x, flavor_y)
-    love.graphics.print("Compare often.", flavor_x, flavor_y + self.font:getHeight() + tokens.line_gap)
+    love.graphics.print(locale.t("dossier_flavor_1"), flavor_x, flavor_y)
+    love.graphics.print(locale.t("dossier_flavor_2"), flavor_x, flavor_y + self.font:getHeight() + tokens.line_gap)
 
     local footer_y = layout.footer_y
     local footer_rule_y = layout.footer_rule_y
@@ -1250,11 +1234,11 @@ function MenuUI:drawSettingsScreen(w, h)
 
     love.graphics.setFont(self.font_title)
     love.graphics.setColor(self.colors.bright)
-    love.graphics.print("LOCAL RUNTIME", layout.content_x, layout.title_y)
+    love.graphics.print(locale.t("settings_title"), layout.content_x, layout.title_y)
 
     love.graphics.setFont(self.font)
     love.graphics.setColor(self.colors.dim)
-    love.graphics.print("Changes take effect immediately.", layout.content_x, layout.subtitle_y)
+    love.graphics.print(locale.t("settings_subtitle"), layout.content_x, layout.subtitle_y)
 
     for i, option in ipairs(SETTINGS_OPTIONS) do
         local item = layout.items[i]
@@ -1334,15 +1318,15 @@ function MenuUI:drawPauseOverlay(w, h)
 
     local layout = self:buildPauseLayout(w, h)
     local unit = self:getRhythmUnit()
-    self:drawPanel(layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h, locale.t("pause_badge"), self.colors.amber, "HOLD")
+    self:drawPanel(layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h, locale.t("pause_badge"), self.colors.amber, locale.t("pause_hold"))
 
     love.graphics.setFont(self.font_large)
     love.graphics.setColor(self.colors.bright)
-    love.graphics.print("PAUSED", layout.content_x, layout.title_y)
+    love.graphics.print(locale.t("pause_title"), layout.content_x, layout.title_y)
 
     love.graphics.setFont(self.font)
     love.graphics.setColor(self.colors.dim)
-    love.graphics.print("Session suspended.", layout.content_x, layout.subtitle_y)
+    love.graphics.print(locale.t("pause_subtitle"), layout.content_x, layout.subtitle_y)
 
     love.graphics.setColor(self.colors.text)
     for i, option in ipairs(PAUSE_OPTIONS) do
