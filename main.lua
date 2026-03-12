@@ -123,6 +123,23 @@ local function clampInputCursor(text, cursor)
     return math.max(0, math.min(utf8_len(text), cursor or utf8_len(text)))
 end
 
+local function boxLineSegments(segments, total_width, border_color)
+    local len = 0
+    for _, seg in ipairs(segments) do
+        len = len + #(seg.text or "")
+    end
+    local result = {}
+    for _, seg in ipairs(segments) do
+        table.insert(result, seg)
+    end
+    local pad = total_width - len - 1
+    if pad > 0 then
+        table.insert(result, {text = string.rep(" ", pad), color = border_color})
+    end
+    table.insert(result, {text = "|", color = border_color})
+    return result
+end
+
 local function getTitleOptions()
     local options = {}
     if Save.exists() then
@@ -866,10 +883,10 @@ local function drawSettingsScreen(w, h)
         drawBackground(w, h)
     end
 
-    local box_x = 176
-    local box_y = 112
     local box_w = 928
     local box_h = 580
+    local box_x = math.floor((w - box_w) / 2)
+    local box_y = math.floor((h - box_h) / 2)
     drawPanel(box_x, box_y, box_w, box_h, "SETTINGS", colors.header)
 
     love.graphics.setFont(font_title)
@@ -906,10 +923,10 @@ local function drawPauseOverlay(w, h)
     love.graphics.setColor(0, 0, 0, 0.52)
     love.graphics.rectangle("fill", 0, 0, w, h)
 
-    local box_x = 430
-    local box_y = 218
     local box_w = 420
     local box_h = 242
+    local box_x = math.floor((w - box_w) / 2)
+    local box_y = math.floor((h - box_h) / 2)
     drawPanel(box_x, box_y, box_w, box_h, "SESSION PAUSED", colors.amber)
 
     love.graphics.setFont(font_large)
@@ -1045,12 +1062,21 @@ function love.load()
     settings = Settings.load()
     last_w, last_h = love.graphics.getDimensions()
 
-    font = love.graphics.newFont("ibm_plex_mono/IBMPlexMono-Regular.ttf", 15)
-    font_bold = love.graphics.newFont("ibm_plex_mono/IBMPlexMono-Bold.ttf", 15)
+    font = love.graphics.newFont("ibm_plex_mono/IBMPlexMono-Regular.ttf", 18)
+    font_bold = love.graphics.newFont("ibm_plex_mono/IBMPlexMono-Bold.ttf", 18)
     font_large = love.graphics.newFont("ibm_plex_mono/IBMPlexMono-Bold.ttf", 24)
     font_title = love.graphics.newFont("ibm_plex_mono/IBMPlexMono-Bold.ttf", 42)
 
-    terminal = Terminal.new(font, font_bold, VIRTUAL_W, VIRTUAL_H)
+    -- Size virtual resolution to fit a 110-column terminal
+    local term_cw = font:getWidth("A")
+    local term_ch = font:getHeight()
+    local term_w = 110 * term_cw + 40
+    if term_w + 200 > VIRTUAL_W then
+        VIRTUAL_W = term_w + 200
+    end
+
+    terminal = Terminal.new(font, font_bold, term_w, VIRTUAL_H)
+    terminal.offset_x = math.floor((VIRTUAL_W - term_w) / 2)
 
     sound = Sound.new()
     sound:load()
@@ -1106,24 +1132,26 @@ function love.update(dt)
 
             local newest = game.inbox[#game.inbox]
             if newest then
+                local BOX_W = 68
+                local box_border = "  +" .. string.rep("=", BOX_W - 4) .. "+"
                 terminal:addBlank()
-                terminal:addSegments({{text = "  +===================================================+", color = colors.cyan}}, true)
-                terminal:addSegments({
+                terminal:addSegments({{text = box_border, color = colors.cyan}}, true)
+                terminal:addSegments(boxLineSegments({
                     {text = "  |  ", color = colors.cyan},
                     {text = "NEW MESSAGE", color = colors.bright},
                     {text = " from ", color = colors.dim},
                     {text = newest.message.from, color = newest.message.from == "UNKNOWN TERMINAL" and colors.amber or colors.text},
-                }, true)
-                terminal:addSegments({
+                }, BOX_W, colors.cyan), true)
+                terminal:addSegments(boxLineSegments({
                     {text = "  |  ", color = colors.cyan},
                     {text = "Subject: ", color = colors.dim},
                     {text = newest.message.subject, color = colors.text},
-                }, true)
-                terminal:addSegments({
+                }, BOX_W, colors.cyan), true)
+                terminal:addSegments(boxLineSegments({
                     {text = "  |  ", color = colors.cyan},
                     {text = "Type INBOX to view. READ MSG " .. #game.inbox .. " to read.", color = colors.dim},
-                }, true)
-                terminal:addSegments({{text = "  +===================================================+", color = colors.cyan}}, true)
+                }, BOX_W, colors.cyan), true)
+                terminal:addSegments({{text = box_border, color = colors.cyan}}, true)
                 terminal:addBlank(true)
             end
         end

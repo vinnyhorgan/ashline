@@ -25,12 +25,14 @@ local function utf8_sub(s, i, j)
 end
 
 local function utf8_len(s)
+    if not s then return 0 end
     local ok, len = pcall(utf8.len, s)
     if ok then return len end
     return #s
 end
 
 local function wrap_segments(segments, cols)
+    if cols <= 0 then return {{}} end
     local lines = {}
     local current_line = {}
     local current_col = 0
@@ -88,11 +90,12 @@ function Terminal.new(font, font_bold, width, height)
     local self = setmetatable({}, Terminal)
     self.font = font
     self.font_bold = font_bold or font
-    self.char_w = font:getWidth("A")
-    self.char_h = font:getHeight()
+    self.char_w = math.max(1, font:getWidth("A"))
+    self.char_h = math.max(1, font:getHeight())
 
     self.width = width or love.graphics.getWidth()
     self.height = height or love.graphics.getHeight()
+    self.offset_x = 0
     self:recalcLayout()
 
     self.displayed_raw = {}
@@ -120,8 +123,10 @@ end
 
 function Terminal:recalcLayout()
     self.cols = math.floor((self.width - MARGIN_X * 2) / self.char_w)
+    if self.cols > 110 then self.cols = 110 end
     self.total_rows = math.floor((self.height - MARGIN_Y * 2) / self.char_h)
     self.content_rows = self.total_rows - HEADER_LINES - STATUS_LINES - INPUT_LINES - 3
+    if self.content_rows > 24 then self.content_rows = 24 end
     if self.content_rows < 1 then self.content_rows = 1 end
 end
 
@@ -304,10 +309,17 @@ local function draw_segments(segments, x, y, font)
 end
 
 function Terminal:render()
+    love.graphics.push()
+    love.graphics.translate(self.offset_x, 0)
+
     love.graphics.setFont(self.font)
 
     love.graphics.setColor(colors.bg)
     love.graphics.rectangle("fill", 0, 0, self.width, self.height)
+
+    -- Terminal frame
+    love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.3)
+    love.graphics.rectangle("line", 0, 0, self.width, self.height)
 
     local x0 = MARGIN_X
     local y = MARGIN_Y
@@ -389,6 +401,8 @@ function Terminal:render()
             love.graphics.rectangle("fill", cursor_x, status_y, self.char_w * 0.8, self.char_h)
         end
     end
+
+    love.graphics.pop()
 end
 
 return Terminal
