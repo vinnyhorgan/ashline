@@ -4049,7 +4049,8 @@ function data.search(keyword)
             end
         end
         if not found then
-            for _, text in ipairs(record.content) do
+            for _, entry in ipairs(record.content) do
+                local text = type(entry) == "table" and entry.text or entry
                 if text:lower():find(keyword, 1, true) then
                     found = true
                     break

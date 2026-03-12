@@ -88,9 +88,15 @@ end
 
 local function format_record_content(record)
     local lines = {}
-    for _, text in ipairs(record.content) do
+    for _, entry in ipairs(record.content) do
+        -- Handle both plain strings (EN) and {text,color} segment tables (IT)
+        local text = type(entry) == "table" and entry.text or entry
+        local explicit_color = type(entry) == "table" and entry.color or nil
+
         if text == "" then
             table.insert(lines, blank())
+        elseif explicit_color then
+            table.insert(lines, {seg("  " .. text, explicit_color)})
         elseif text:find("^%s*>") or text:find("WARNING") or text:find("ALERT") or text:find("AVVISO") or text:find("ALLERTA") then
             table.insert(lines, {seg("  " .. text, colors.amber)})
         elseif text:find("^%s*NOTE") or text:find("^%s*NOTA") or text:find("^%s*RECOMMENDATION") or text:find("^%s*RACCOMANDAZIONE") or text:find("^%s*Directive note") or text:find("^%s*Nota direttiva") then
