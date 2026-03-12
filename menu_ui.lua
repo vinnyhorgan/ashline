@@ -47,6 +47,14 @@ local function stackPush(cursor_y, height, gap)
     return y, cursor_y + height + (gap or 0)
 end
 
+local function measureSegmentsWidth(active_font, segments)
+    local width = 0
+    for _, segment in ipairs(segments or {}) do
+        width = width + active_font:getWidth(segment.text or "")
+    end
+    return width
+end
+
 function MenuUI.new(opts)
     local self = setmetatable({}, MenuUI)
     self.colors = assert(opts.colors, "colors is required")
@@ -154,6 +162,13 @@ function MenuUI:getTokens()
     return {
         unit = unit,
         frame_inset = MENU_FRAME_INSET,
+        frame_outer_margin = math.floor(MENU_FRAME_INSET * 0.5),
+        frame_inner_margin = MENU_FRAME_INSET,
+        frame_corner_len = math.floor(unit * 3.2),
+        frame_rail_w = math.max(2, math.floor(unit * 0.33)),
+        dot_spacing = unit * 5,
+        grid_spacing = unit * 10,
+        scanline_step = unit * 4,
         panel_header_h = PANEL_HEADER_H,
         panel_pad_x = unit * 2 + 2,
         panel_pad_y = unit * 2,
@@ -247,8 +262,11 @@ function MenuUI:buildTitleLayout(w, h)
     local right_w = w - right_x - (t.frame_inset + unit)
     local right_inner_w = right_w - t.panel_pad_x * 2
 
-    local selected_meta = self:getTitleOptionMeta(title_options[1] or "NEW SESSION")
-    local body_h = self:getWrappedTextHeight(self.font, selected_meta.body, right_inner_w)
+    local body_h = self.font:getHeight()
+    for _, option in ipairs(title_options) do
+        local meta = self:getTitleOptionMeta(option)
+        body_h = math.max(body_h, self:getWrappedTextHeight(self.font, meta.body, right_inner_w))
+    end
     local runtime_rows_h = self.font:getHeight() * 3 + t.line_gap * 2
     local top_content_h = self.font:getHeight()
         + t.block_gap
@@ -267,7 +285,6 @@ function MenuUI:buildTitleLayout(w, h)
     local right_inner_h = t.panel_pad_y * 2 + top_content_h + t.section_gap * 2 + bottom_band_h
     local right_h = math.max(menu.panel.h, PANEL_HEADER_H + right_inner_h)
 
-    local atmosphere_y = math.max(menu.panel.y + menu.panel.h, menu.panel.y + right_h) + math.floor(unit * 2.6)
     local footer_y = h - t.frame_inset + t.footer_gap
     local footer_rule_y = footer_y - math.floor(unit * 2.0)
     local content_top = menu.panel.y + PANEL_HEADER_H + t.panel_pad_y
@@ -300,7 +317,6 @@ function MenuUI:buildTitleLayout(w, h)
             session_w = session_w,
             flavor_w = flavor_w,
         },
-        atmosphere_y = atmosphere_y,
         footer_y = footer_y,
         footer_rule_y = footer_rule_y,
     }
@@ -309,13 +325,15 @@ end
 function MenuUI:buildSettingsLayout(w, h)
     local t = self:getTokens()
     local unit = t.unit
+    local hint_segments = self:getSettingsHelpSegments()
     local widest_label = self:measureMaxWidth(SETTINGS_OPTIONS, self.font, function(option)
         return option.label
     end)
     local widest_value = self:measureMaxWidth({"DELIBERATE", "MEASURED", "STANDARD", "INSTANT", "100%"}, self.font)
-    local box_w = math.max(928, widest_label + widest_value + unit * 22)
+    local desired_w = widest_label + widest_value + unit * 22
+    local box_w = clamp(desired_w, math.floor(w * 0.58), w - (t.frame_inset + unit * 2) * 2)
     local panel_x = math.floor((w - box_w) / 2)
-    local hint_block_h = self.font:getHeight() + math.floor(unit * 2.8)
+    local hint_block_h = self.font:getHeight() + math.floor(unit * 3.1)
     local list_opts = {
         inner_pad_x = math.floor(unit * 2.3),
         top_pad = self.font_title:getHeight() + self.font:getHeight() + math.floor(unit * 3.5),
@@ -326,10 +344,16 @@ function MenuUI:buildSettingsLayout(w, h)
     local preview = self:buildListLayout(0, 0, box_w, #SETTINGS_OPTIONS, self.font, list_opts)
     local panel_y = math.floor((h - preview.panel.h) / 2)
     local list = self:buildListLayout(panel_x, panel_y, box_w, #SETTINGS_OPTIONS, self.font, list_opts)
+    local content_x = (list.items[1] and list.items[1].x) or (list.panel.x + t.panel_pad_x)
+    local content_w = (list.panel.x + list.panel.w - t.panel_pad_x) - content_x
 
     return {
         panel = list.panel,
         items = list.items,
+        content_x = content_x,
+        content_w = content_w,
+        hint_segments = hint_segments,
+        hint_rule_y = list.panel.y + list.panel.h - hint_block_h,
         hint_y = list.panel.y + list.panel.h - self.font:getHeight() - math.floor(unit * 1.4),
         title_y = list.panel.y + PANEL_HEADER_H + math.floor(unit * 1.4),
         subtitle_y = list.panel.y + PANEL_HEADER_H + self.font_title:getHeight() + math.floor(unit * 1.8),
@@ -340,7 +364,7 @@ end
 function MenuUI:buildPauseLayout(w, h)
     local t = self:getTokens()
     local unit = t.unit
-    local box_w = math.max(420, self:measureMaxWidth(PAUSE_OPTIONS, self.font) + unit * 12)
+    local box_w = clamp(self:measureMaxWidth(PAUSE_OPTIONS, self.font) + unit * 12, math.floor(w * 0.28), math.floor(w * 0.42))
     local panel_x = math.floor((w - box_w) / 2)
     local list_opts = {
         inner_pad_x = math.floor(unit * 1.9),
@@ -352,11 +376,45 @@ function MenuUI:buildPauseLayout(w, h)
     local preview = self:buildListLayout(0, 0, box_w, #PAUSE_OPTIONS, self.font, list_opts)
     local panel_y = math.floor((h - preview.panel.h) / 2)
     local list = self:buildListLayout(panel_x, panel_y, box_w, #PAUSE_OPTIONS, self.font, list_opts)
+    local content_x = (list.items[1] and list.items[1].x) or (list.panel.x + t.panel_pad_x)
 
     return {
         panel = list.panel,
         items = list.items,
+        content_x = content_x,
         title_y = list.panel.y + PANEL_HEADER_H + math.floor(unit * 1.4),
+    }
+end
+
+function MenuUI:getTitleHelpSegments()
+    return {
+        {text = "Up/Down", color = self.colors.text},
+        {text = " move", color = self.colors.dim},
+        {text = "  |  ", color = self.colors.border},
+        {text = "Enter", color = self.colors.text},
+        {text = " select", color = self.colors.dim},
+        {text = "  |  ", color = self.colors.border},
+        {text = "Mouse", color = self.colors.text},
+        {text = " choose", color = self.colors.dim},
+        {text = "  |  ", color = self.colors.border},
+        {text = "Esc", color = self.colors.text},
+        {text = " back", color = self.colors.dim},
+    }
+end
+
+function MenuUI:getSettingsHelpSegments()
+    return {
+        {text = "Left/Right", color = self.colors.text},
+        {text = " adjust", color = self.colors.dim},
+        {text = "  |  ", color = self.colors.border},
+        {text = "Enter", color = self.colors.text},
+        {text = " toggle/select", color = self.colors.dim},
+        {text = "  |  ", color = self.colors.border},
+        {text = "Wheel", color = self.colors.text},
+        {text = " adjust", color = self.colors.dim},
+        {text = "  |  ", color = self.colors.border},
+        {text = "Esc", color = self.colors.text},
+        {text = " back", color = self.colors.dim},
     }
 end
 
@@ -555,77 +613,90 @@ function MenuUI:drawBackground(w, h)
     love.graphics.setColor(colors.bg)
     love.graphics.rectangle("fill", 0, 0, w, h)
 
+    local tokens = self:getTokens()
+    local unit = tokens.unit
+    local outer = tokens.frame_outer_margin
+    local inner = tokens.frame_inner_margin
+    local rail = math.floor(outer + unit * 2.5)
+    local top = math.floor(outer + unit * 1.3)
+    local grid_left = inner + unit * 2
+    local grid_right = w - inner - unit * 2
+    local grid_top = inner + unit
+    local grid_bottom = h - inner - unit
     local t = love.timer.getTime()
     love.graphics.setLineWidth(1)
 
     love.graphics.setColor(colors.very_dim[1], colors.very_dim[2], colors.very_dim[3], 0.15)
-    for gx = 96, w - 96, 48 do
-        for gy = 96, h - 96, 48 do
+    for gx = grid_left, grid_right, tokens.dot_spacing do
+        for gy = grid_top, grid_bottom, tokens.dot_spacing do
             love.graphics.circle("fill", gx, gy, 1)
         end
     end
 
-    for i = 0, 17 do
-        local y = 86 + i * 38
+    local scan_count = math.max(1, math.floor((grid_bottom - grid_top) / tokens.scanline_step))
+    for i = 0, scan_count do
+        local y = grid_top + i * tokens.scanline_step
         local wobble = math.sin(t * 0.35 + i * 0.8) * 18
         local a = 0.12 + 0.08 * math.sin(t * 0.6 + i * 1.1)
         love.graphics.setColor(colors.very_dim[1], colors.very_dim[2], colors.very_dim[3], a)
-        love.graphics.line(78, y, w * 0.72 + wobble, y)
+        love.graphics.line(inner, y, clamp(w * 0.72 + wobble, inner + unit * 20, w - inner), y)
     end
 
     love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.10)
-    for x = 96, w - 96, 96 do
-        love.graphics.line(x, 64, x, h - 64)
+    for x = grid_left, grid_right, tokens.grid_spacing do
+        love.graphics.line(x, top, x, h - top)
     end
 
     love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.45)
-    love.graphics.rectangle("line", 52, 52, w - 104, h - 104)
+    love.graphics.rectangle("line", outer + unit, outer + unit, w - (outer + unit) * 2, h - (outer + unit) * 2)
 
     love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.15)
-    love.graphics.rectangle("line", 78, 78, w - 156, h - 156)
+    love.graphics.rectangle("line", inner, inner, w - inner * 2, h - inner * 2)
 
-    local cl = 30
+    local cl = tokens.frame_corner_len
     love.graphics.setLineWidth(2)
     love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.5)
-    love.graphics.line(40, 40, 40 + cl, 40)
-    love.graphics.line(40, 40, 40, 40 + cl)
-    love.graphics.line(w - 40, 40, w - 40 - cl, 40)
-    love.graphics.line(w - 40, 40, w - 40, 40 + cl)
-    love.graphics.line(40, h - 40, 40 + cl, h - 40)
-    love.graphics.line(40, h - 40, 40, h - 40 - cl)
-    love.graphics.line(w - 40, h - 40, w - 40 - cl, h - 40)
-    love.graphics.line(w - 40, h - 40, w - 40, h - 40 - cl)
+    love.graphics.line(outer, outer, outer + cl, outer)
+    love.graphics.line(outer, outer, outer, outer + cl)
+    love.graphics.line(w - outer, outer, w - outer - cl, outer)
+    love.graphics.line(w - outer, outer, w - outer, outer + cl)
+    love.graphics.line(outer, h - outer, outer + cl, h - outer)
+    love.graphics.line(outer, h - outer, outer, h - outer - cl)
+    love.graphics.line(w - outer, h - outer, w - outer - cl, h - outer)
+    love.graphics.line(w - outer, h - outer, w - outer, h - outer - cl)
     love.graphics.setLineWidth(1)
 
     love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.06)
-    love.graphics.rectangle("fill", 63, 52, 3, h - 104)
-    love.graphics.rectangle("fill", w - 66, 52, 3, h - 104)
+    love.graphics.rectangle("fill", rail, outer + unit, tokens.frame_rail_w, h - (outer + unit) * 2)
+    love.graphics.rectangle("fill", w - rail - tokens.frame_rail_w, outer + unit, tokens.frame_rail_w, h - (outer + unit) * 2)
 
     love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.35 + 0.25 * math.sin(t * 3.0))
-    love.graphics.circle("fill", 72, 60, 3)
+    love.graphics.circle("fill", rail + unit, top - math.floor(unit * 0.4), 3)
     love.graphics.setColor(colors.header[1], colors.header[2], colors.header[3], 0.35 + 0.2 * math.sin(t * 2.2 + 1.0))
-    love.graphics.circle("fill", 84, 60, 3)
+    love.graphics.circle("fill", rail + math.floor(unit * 2.3), top - math.floor(unit * 0.4), 3)
     love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.35 + 0.2 * math.sin(t * 2.7 + 2.0))
-    love.graphics.circle("fill", w - 72, 60, 3)
+    love.graphics.circle("fill", w - rail - unit, top - math.floor(unit * 0.4), 3)
 
     love.graphics.setFont(self.font)
     local hex = "0123456789ABCDEF"
-    for i = 0, 13 do
-        local y = 100 + i * 44
+    local side_step = math.floor(unit * 4.8)
+    local side_count = math.max(1, math.floor((grid_bottom - grid_top) / side_step))
+    for i = 0, side_count do
+        local y = grid_top + unit + i * side_step
         local idx = (math.floor(t * 2.0 + i * 3.7) % 16) + 1
         local ch = hex:sub(idx, idx)
         local a2 = 0.08 + 0.05 * math.sin(t * 1.8 + i * 2.3)
         love.graphics.setColor(colors.dim[1], colors.dim[2], colors.dim[3], a2)
-        love.graphics.print(ch, 58, y)
+        love.graphics.print(ch, rail - unit, y)
     end
 
-    for i = 0, 13 do
-        local y = 100 + i * 44
+    for i = 0, side_count do
+        local y = grid_top + unit + i * side_step
         local idx = (math.floor(t * 1.3 + i * 5.1) % 16) + 1
         local ch = hex:sub(idx, idx)
         local a2 = 0.06 + 0.04 * math.sin(t * 2.1 + i * 1.7)
         love.graphics.setColor(self.colors.dim[1], self.colors.dim[2], self.colors.dim[3], a2)
-        love.graphics.print(ch, w - 78, y)
+        love.graphics.print(ch, w - rail - unit, y)
     end
 end
 
@@ -669,7 +740,7 @@ function MenuUI:drawPanel(x, y, w, h, title, accent)
     local title_w = self.font_bold:getWidth(title)
     love.graphics.setColor(ac[1], ac[2], ac[3], 0.10 + pulse)
     love.graphics.print(title, title_x + 1, header_text_y + 1)
-    love.graphics.setColor(accent == self.colors.amber and self.colors.amber or self.colors.cyan)
+    love.graphics.setColor(ac)
     love.graphics.print(title, title_x, header_text_y)
 
     love.graphics.setColor(self.colors.border)
@@ -700,6 +771,24 @@ function MenuUI:drawInlineSegments(x, y, segments, active_font)
         love.graphics.print(segment.text, cursor_x, y)
         cursor_x = cursor_x + active_font:getWidth(segment.text)
     end
+end
+
+function MenuUI:drawFooterRow(left_x, right_x, y, segments, right_text)
+    local help_x = left_x
+    if right_text then
+        local gap = self:getRhythmUnit() * 4
+        local help_w = measureSegmentsWidth(self.font, segments)
+        local right_w = self.font:getWidth(right_text)
+        local help_max_right = right_x - right_w - gap
+        if help_x + help_w > help_max_right then
+            help_x = math.max(left_x, help_max_right - help_w)
+        end
+
+        love.graphics.setColor(self.colors.dim)
+        love.graphics.print(right_text, right_x - right_w, y)
+    end
+
+    self:drawInlineSegments(help_x, y, segments, self.font)
 end
 
 function MenuUI:drawInteractiveRow(item, selected, hovered, anim, accent)
@@ -807,13 +896,15 @@ function MenuUI:drawTitleScreen(w, h)
     love.graphics.setColor(self.colors.very_dim)
     love.graphics.print("Meridian survives by omission.", left + 4, layout.tagline_y)
 
+    local access_text = "Night shift access point / operator handoff required"
     love.graphics.setColor(self.colors.cyan)
-    love.graphics.print("Night shift access point / operator handoff required", left + 4, layout.access_y)
+    love.graphics.print(access_text, left + 4, layout.access_y)
 
     love.graphics.setColor(self.colors.border[1], self.colors.border[2], self.colors.border[3], 0.5)
-    love.graphics.rectangle("fill", left, layout.separator_y, 440, 1)
+    local separator_w = math.max(math.floor(layout.menu.panel.w * 0.92), self.font:getWidth(access_text) + unit * 4)
+    love.graphics.rectangle("fill", left, layout.separator_y, separator_w, 1)
     love.graphics.setColor(self.colors.cyan[1], self.colors.cyan[2], self.colors.cyan[3], 0.2)
-    love.graphics.rectangle("fill", left, layout.separator_y + 1, 280 + math.floor(unit * 1.5), 1)
+    love.graphics.rectangle("fill", left, layout.separator_y + 1, math.floor(separator_w * 0.64), 1)
 
     love.graphics.setFont(self.font)
     local signal_text = "SIGNAL LOCKED"
@@ -943,36 +1034,8 @@ function MenuUI:drawTitleScreen(w, h)
     love.graphics.setFont(self.font)
     local footer_left_x = MENU_FRAME_INSET + unit
     local footer_right_x = w - MENU_FRAME_INSET - unit
-    local footer_gap = unit * 4
     local credit = "made with <3 by vinny"
-    local credit_w = self.font:getWidth(credit)
-    local help_segments = {
-        {text = "Up/Down", color = self.colors.text},
-        {text = " move", color = self.colors.dim},
-        {text = "  |  ", color = self.colors.border},
-        {text = "Enter", color = self.colors.text},
-        {text = " select", color = self.colors.dim},
-        {text = "  |  ", color = self.colors.border},
-        {text = "Mouse", color = self.colors.text},
-        {text = " choose", color = self.colors.dim},
-        {text = "  |  ", color = self.colors.border},
-        {text = "Esc", color = self.colors.text},
-        {text = " back", color = self.colors.dim},
-    }
-    local help_w = 0
-    for _, segment in ipairs(help_segments) do
-        help_w = help_w + self.font:getWidth(segment.text)
-    end
-    local help_x = footer_left_x
-    local help_max_right = footer_right_x - credit_w - footer_gap
-    if help_x + help_w > help_max_right then
-        help_x = math.max(footer_left_x, help_max_right - help_w)
-    end
-
-    self:drawInlineSegments(help_x, footer_y, help_segments, self.font)
-
-    love.graphics.setColor(self.colors.dim)
-    love.graphics.print(credit, footer_right_x - credit_w, footer_y)
+    self:drawFooterRow(footer_left_x, footer_right_x, footer_y, self:getTitleHelpSegments(), credit)
 
     local save_notice = self.get_save_notice()
     if save_notice and #save_notice > 0 then
@@ -998,11 +1061,11 @@ function MenuUI:drawSettingsScreen(w, h)
 
     love.graphics.setFont(self.font_title)
     love.graphics.setColor(self.colors.bright)
-    love.graphics.print("SETTINGS", box_x + unit * 2 + 6, layout.title_y)
+    love.graphics.print("SETTINGS", layout.content_x, layout.title_y)
 
     love.graphics.setFont(self.font)
     love.graphics.setColor(self.colors.dim)
-    love.graphics.print("Changes apply immediately and persist as JSON.", box_x + unit * 2 + 10, layout.subtitle_y)
+    love.graphics.print("Changes apply immediately and persist as JSON.", layout.content_x, layout.subtitle_y)
 
     for i, option in ipairs(SETTINGS_OPTIONS) do
         local item = layout.items[i]
@@ -1028,8 +1091,9 @@ function MenuUI:drawSettingsScreen(w, h)
         end
     end
 
-    love.graphics.setColor(self.colors.dim)
-    love.graphics.print("Left/Right adjust  Enter toggle/select  Mouse wheel adjust  Esc back", box_x + unit * 2 + 10, layout.hint_y)
+    love.graphics.setColor(self.colors.border[1], self.colors.border[2], self.colors.border[3], 0.28)
+    love.graphics.rectangle("fill", layout.content_x, layout.hint_rule_y, layout.content_w, 1)
+    self:drawFooterRow(layout.content_x, layout.content_x + layout.content_w, layout.hint_y, layout.hint_segments)
 end
 
 function MenuUI:drawPauseOverlay(w, h)
@@ -1047,7 +1111,7 @@ function MenuUI:drawPauseOverlay(w, h)
 
     love.graphics.setFont(self.font_large)
     love.graphics.setColor(self.colors.bright)
-    love.graphics.print("PAUSED", box_x + unit * 2 + 6, layout.title_y)
+    love.graphics.print("PAUSED", layout.content_x, layout.title_y)
 
     love.graphics.setFont(self.font)
     for i, option in ipairs(PAUSE_OPTIONS) do
