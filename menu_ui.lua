@@ -6,7 +6,6 @@ local PANEL_HEADER_H = 38
 
 local PAUSE_OPTIONS = {
     "RESUME",
-    "SETTINGS",
     "RESTART SESSION",
     "QUIT TO TITLE",
 }
@@ -1217,12 +1216,7 @@ function MenuUI:drawTitleScreen(w, h)
 end
 
 function MenuUI:drawSettingsScreen(w, h)
-    if self.get_settings_return_state() == "pause" then
-        love.graphics.setColor(0, 0, 0, 0.65)
-        love.graphics.rectangle("fill", 0, 0, w, h)
-    else
-        self:drawBackground(w, h)
-    end
+    self:drawBackground(w, h)
 
     local layout = self:buildSettingsLayout(w, h)
     local unit = self:getRhythmUnit()

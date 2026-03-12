@@ -557,10 +557,6 @@ function love.load()
                     end
                     app_state = "game"
                 end, 0.18)
-            elseif option == "SETTINGS" then
-                menu_ui:requestTransition(function()
-                    openSettings("pause")
-                end)
             elseif option == "RESTART SESSION" then
                 menu_ui:requestTransition(function()
                     startSession()
@@ -726,8 +722,7 @@ function love.draw()
         love.graphics.rectangle("fill", 0, 0, w, h)
 
         renderVirtual(function(vw, vh)
-            local in_game = game and (app_state == "game" or app_state == "boot" or app_state == "pause"
-                or (app_state == "settings" and settings_return_state == "pause"))
+            local in_game = game and (app_state == "game" or app_state == "boot" or app_state == "pause")
             if in_game and terminal then
                 drawScaledTerminal()
             end
