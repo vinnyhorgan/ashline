@@ -298,6 +298,15 @@ function handlers.ALERTS(game, _args)
     if game.records_read["INC-6120"] then
         table.insert(alerts, {"INC-6120", "Pre-activation survey proves Directorate knew surface viable", "DIRECTIVE BREACH"})
     end
+    if game.flags["ash_contact"] then
+        table.insert(alerts, {"SEC", "Commander Ash has flagged this terminal for review", "PRIORITY-1"})
+    end
+    if game.records_read["MLOG-ANN-0025"] then
+        table.insert(alerts, {"MLOG-ANN-0025", "A-17 detainee manifest accessed — identities exposed", "PRIORITY-1"})
+    end
+    if game.records_read["WIT-MIRA-001"] then
+        table.insert(alerts, {"WIT-MIRA-001", "Recovered slate from detainee A17-22", "PERSONAL"})
+    end
     if game.decisions_unlocked then
         table.insert(alerts, {"FINAL", "A terminal decision is now available", "IMMEDIATE"})
     end
@@ -1074,6 +1083,72 @@ function commands.getComparisonAnalysis(id1, id2)
             "The Lantern Assembly demanded resource audits — exactly what would have exposed the rerouting.",
             "",
             "The protest was not about ideology. It was about to find the missing water.",
+        },
+        ["MLOG-PER-0031:MLOG-ANN-0025"] = {
+            "Your personnel file mentions a family connection to Suppression Event CL-2060.",
+            "The detainee manifest lists VOSS, MIRA as entry A17-22. Age at intake: fifteen.",
+            "",
+            "Your sister has been behind the wall for eleven years. You are reading her file.",
+        },
+        ["MLOG-PER-0031:MLOG-SEC-0031"] = {
+            "Your personnel evaluation calls your night shift assignment 'standard rotation.'",
+            "Your security observation file says Drenn requested the assignment three months early.",
+            "",
+            "You were not rotated here. You were placed here.",
+        },
+        ["MLOG-SEC-0031:DIR-ASSIGN-0031"] = {
+            "Security has been watching you since the day you sat down at this terminal.",
+            "Drenn's handwritten addendum says she chose you because you have a sister behind the wall.",
+            "",
+            "Ash watches to contain you. Drenn arranged you to find the truth. You sit between their intentions.",
+        },
+        ["INC-MOR-2071:DIR-4980"] = {
+            "Morale scores are identical to two decimal places across 1,800 respondents. Probability: near zero.",
+            "The calm-ash directive calls cognitive suppression an acceptable population management tool.",
+            "",
+            "They are not measuring morale. They are measuring the dosage.",
+        },
+        ["MLOG-CAF-3001:MLOG-FOOD-4415"] = {
+            "Ration allocations have dropped 460 kcal per person since 2065.",
+            "64 CANTEEN-ZERO events appear daily in the food distribution log.",
+            "",
+            "The silo is slowly starving because it is feeding people who do not officially exist.",
+        },
+        ["WIT-ANON-001:MLOG-SHIFT-7140"] = {
+            "Operator 27 warns you that they rotate night operators every 14 months.",
+            "The shift handover log confirms six previous operators with an average tenure of 14.2 months.",
+            "",
+            "You are not discovering anything new. You are the seventh person to find the same branch.",
+        },
+        ["INC-ARC-7340:MLOG-SEC-0031"] = {
+            "Your access audit shows every query forwarded to Commander Ash in real-time.",
+            "Your security file says if you access suppressed branches, Ash is to be notified immediately.",
+            "",
+            "You are reading your own surveillance. The surveillance is reading you back.",
+        },
+        ["WIT-KELL-001:WIT-MIRA-001"] = {
+            "Elsa Kell writes about a girl named Mira who asked if she had a family.",
+            "Mira's own slate says she remembers someone with her eyes but cannot hold the name.",
+            "",
+            "Your sister is alive. She is trying to remember you. She drew a bird she has never seen.",
+        },
+        ["INC-MAINT-0088:INC-7300"] = {
+            "Twelve years of identical maintenance entries: 'partition sealed, no access required.'",
+            "Thermal imaging shows body heat behind that same sealed partition.",
+            "",
+            "The inspector was never asked to notice. The heat was never asked to stop.",
+        },
+        ["MLOG-POP-2071:INC-MOR-2071"] = {
+            "Voluntary sterilization has quadrupled since the calm-ash water additive began.",
+            "Morale scores are statistically impossible in their uniformity.",
+            "",
+            "The population is not choosing stability. It is being chemically rendered into it.",
+        },
+        ["MLOG-ANN-0025:MLOG-ANN-0018"] = {
+            "The detainee manifest lists 45 adults relocated in 2060. The birth registry lists 19 children born after.",
+            "The children are identified by code numbers. The adults at least have names.",
+            "",
+            "In one generation, they went from political prisoners to a nameless population experiment.",
         },
     }
 

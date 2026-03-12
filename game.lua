@@ -269,6 +269,8 @@ function Game:updateDerivedState()
     if self.records_read["INC-6410"] then alerts = alerts + 1 end
     if self.flags["msg_delivered_MSG-015"] then alerts = alerts + 1 end
     if self.flags["construction_lead"] then alerts = alerts + 1 end
+    if self.flags["ash_contact"] then alerts = alerts + 1 end
+    if self.records_read["WIT-MIRA-001"] then alerts = alerts + 1 end
     self.alert_count = alerts
 
     if self.phase == "main" then
@@ -366,6 +368,69 @@ function Game:checkTriggers(_context)
     if self.records_read["WIT-099-A"] and self.records_read["DIR-1010"]
         and not self.flags["msg_delivered_MSG-020"] then
         self:queueMessage("MSG-020", 6.0)
+    end
+
+    -- Naima reveals she knows Mira after you read detainee manifest
+    if self.records_read["MLOG-ANN-0025"] and not self.flags["msg_delivered_MSG-021"] then
+        self:queueMessage("MSG-021", 5.0)
+    end
+
+    -- Jonas personality message after early evidence phase
+    if self.flags["msg_delivered_MSG-003"]
+        and count_true(self.records_read) >= 6
+        and not self.flags["msg_delivered_MSG-022"] then
+        self:queueMessage("MSG-022", 8.0)
+    end
+
+    -- Sera ethics journal after reading INC-6410 + WIT-084-A
+    if self.records_read["INC-6410"] and self.records_read["WIT-084-A"]
+        and not self.flags["msg_delivered_MSG-023"] then
+        self:queueMessage("MSG-023", 6.0)
+    end
+
+    -- Commander Ash direct threat after audit risk + security reads
+    if self.audit_risk >= 2 and security_reads >= 2
+        and not self.flags["msg_delivered_MSG-024"] then
+        self:queueMessage("MSG-024", 10.0)
+    end
+
+    -- Elsa Kell message from inside after annex vault + classroom records
+    if self.flags["annex_vault_unlocked"]
+        and (self.records_read["MLOG-ANN-0012"] or self.records_read["WIT-KELL-001"])
+        and not self.flags["msg_delivered_MSG-025"] then
+        self:queueMessage("MSG-025", 7.0)
+    end
+
+    -- System personnel flag after Commander Ash contact
+    if self.flags["ash_contact"] and not self.flags["msg_delivered_MSG-026"] then
+        self:queueMessage("MSG-026", 4.0)
+    end
+
+    -- Jonas going dark after doctrine unlocked + many records
+    if self.flags["doctrine_unlocked"]
+        and count_true(self.records_read) >= 25
+        and not self.flags["msg_delivered_MSG-027"] then
+        self:queueMessage("MSG-027", 8.0)
+    end
+
+    -- Sera connects your assignment to Drenn after reading assignment order
+    if self.records_read["DIR-ASSIGN-0031"] and not self.flags["msg_delivered_MSG-028"] then
+        self:queueMessage("MSG-028", 5.0)
+    end
+
+    -- Naima final message — late game, after most evidence
+    if self.flags["naima_knows_mira"]
+        and self.flags["dawn_vault_unlocked"]
+        and count_true(self.records_read) >= 35
+        and not self.flags["msg_delivered_MSG-029"] then
+        self:queueMessage("MSG-029", 6.0)
+    end
+
+    -- Mira's message — after decisions unlocked, the last thing before you choose
+    if self.decisions_unlocked
+        and self.records_read["WIT-MIRA-001"]
+        and not self.flags["msg_delivered_MSG-030"] then
+        self:queueMessage("MSG-030", 3.0)
     end
 
     self.decisions_unlocked = compute_decisions_unlocked(self)
@@ -496,25 +561,24 @@ end
 function Game:getObjectives()
     if self.decisions_unlocked then
         return {
-            "Read any remaining annex or dawn files before you choose.",
+            "Read any remaining files. Check your inbox one last time.",
             "Use ACTIONS to review the final authorization set.",
-            "Choose what A-17, the silo, and the sky are worth to you.",
+            "Choose what A-17, the silo, the sky, and Mira are worth to you.",
         }
     end
 
     if self.flags["dawn_vault_unlocked"] or self.flags["surface_cache_decoded"] then
         return {
             "Read the DAWN branch files — someone knew the surface was alive.",
+            "WIT-MIRA-001 is in the archive. Read it if you can bear it.",
             "Run ACT-108 so the cost of disclosure is explicit, not imagined.",
-            "Check INC-6120 if you want to know what Meridian knew before sealing.",
         }
     end
 
     if self.flags["doctrine_unlocked"] then
         return {
             "Finish reading the black-vault doctrine files. DIR-9200 links to other silos.",
-            "Run the ration model if you have not authorized ACT-104.",
-            "Prepare a live proof channel from A-17 if you have not authorized ACT-105.",
+            "DIR-ASSIGN-0031 explains how you ended up at this terminal.",
             "Follow the DAWN references into external survey records.",
         }
     end
@@ -529,9 +593,9 @@ function Game:getObjectives()
 
     if self.flags["annex_vault_unlocked"] then
         return {
-            "Read the annex suppression records now visible in the branch.",
+            "Read MLOG-ANN-0025 — the detainee manifest. Look for names you recognize.",
             "INC-6410 documents a medical emergency. Read it if Sera matters to you.",
-            "MLOG-ANN-0018 contains the birth registry. The children have numbers, not names.",
+            "WIT-KELL-001 is a message from inside the wall. Someone is writing to you.",
         }
     end
 
@@ -547,7 +611,7 @@ function Game:getObjectives()
         return {
             "Decide whether to buy Naima time with ACT-101.",
             "Read MLOG-ARC-0902 and any registry files tied to LANTERN.",
-            "Follow med and air anomalies; they all point at occupancy.",
+            "Try PERSONNEL CIV-0031. Try reading your own file.",
         }
     end
 
