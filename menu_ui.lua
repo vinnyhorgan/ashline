@@ -95,6 +95,13 @@ function MenuUI.new(opts)
         y = 0,
         inside = false,
     }
+    self.transition = {
+        active = false,
+        timer = 0,
+        duration = 0,
+        callback = nil,
+        fired = false,
+    }
 
     if love and love.mouse then
         self.cursor_arrow = love.mouse.getSystemCursor("arrow")
@@ -329,7 +336,7 @@ function MenuUI:buildSettingsLayout(w, h)
     local widest_label = self:measureMaxWidth(SETTINGS_OPTIONS, self.font, function(option)
         return option.label
     end)
-    local widest_value = self:measureMaxWidth({"DELIBERATE", "MEASURED", "STANDARD", "INSTANT", "100%"}, self.font)
+    local widest_value = self:measureMaxWidth({"DELIBERATE", "MEASURED", "STANDARD", "INSTANT", "[==========] 100%"}, self.font)
     local desired_w = widest_label + widest_value + unit * 22
     local box_w = clamp(desired_w, math.floor(w * 0.58), w - (t.frame_inset + unit * 2) * 2)
     local panel_x = math.floor((w - box_w) / 2)
@@ -482,6 +489,23 @@ function MenuUI:deactivate()
     self:setCursorStyle(false)
 end
 
+function MenuUI:isTransitioning()
+    return self.transition.active
+end
+
+function MenuUI:requestTransition(callback, duration)
+    if self.transition.active then
+        return
+    end
+    self.transition = {
+        active = true,
+        timer = 0,
+        duration = duration or 0.30,
+        callback = callback,
+        fired = false,
+    }
+end
+
 function MenuUI:resetTitle()
     self.title_index = 1
     self.pause_index = 1
@@ -568,11 +592,7 @@ function MenuUI:updateAnimations(dt)
             local target_hover = (i == hover_index) and 1 or 0
             local target_shift = target_focus * 2
             state.focus = smoothToward(state.focus, target_focus, 14, dt)
-            if target_hover == 0 then
-                state.hover = 0
-            else
-                state.hover = smoothToward(state.hover, target_hover, 20, dt)
-            end
+            state.hover = smoothToward(state.hover, target_hover, target_hover == 0 and 10 or 20, dt)
             state.shift = smoothToward(state.shift, target_shift, 12, dt)
             states[i] = state
         end
@@ -587,6 +607,20 @@ function MenuUI:update(app_state, dt)
     self:updateAnimations(dt)
     if app_state ~= "title" and app_state ~= "settings" and app_state ~= "pause" then
         self:setCursorStyle(false)
+    end
+
+    if self.transition.active then
+        self.transition.timer = self.transition.timer + dt
+        local mid = self.transition.duration * 0.5
+        if not self.transition.fired and self.transition.timer >= mid then
+            self.transition.fired = true
+            if self.transition.callback then
+                self.transition.callback()
+            end
+        end
+        if self.transition.timer >= self.transition.duration then
+            self.transition.active = false
+        end
     end
 end
 
@@ -606,6 +640,55 @@ function MenuUI:formatSettingValue(option)
         return tostring(value)
     end
     return ""
+end
+
+function MenuUI:drawVolumeBar(item, value, selected, text_y, value_pad)
+    local pct_text = tostring(math.floor(value * 100 + 0.5)) .. "%"
+    local right_edge = item.x + item.w - value_pad
+    local pct_w = self.font:getWidth(pct_text)
+    local gap_w = self.font:getWidth(" ")
+
+    love.graphics.setColor(selected and self.colors.cyan or self.colors.dim)
+    love.graphics.print(pct_text, right_edge - pct_w, text_y)
+
+    local bar_full = "[" .. string.rep("-", 10) .. "]"
+    local bar_x = right_edge - pct_w - gap_w - self.font:getWidth(bar_full)
+    local filled = math.floor(value * 10 + 0.5)
+
+    love.graphics.setColor(selected and self.colors.very_dim or {self.colors.very_dim[1], self.colors.very_dim[2], self.colors.very_dim[3], 0.5})
+    love.graphics.print(bar_full, bar_x, text_y)
+
+    if filled > 0 then
+        love.graphics.setColor(selected and self.colors.text or self.colors.dim)
+        love.graphics.print(string.rep("=", filled), bar_x + self.font:getWidth("["), text_y)
+    end
+end
+
+function MenuUI:drawTransitionOverlay(w, h)
+    local tr = self.transition
+    local progress = math.min(1, tr.timer / tr.duration)
+    local alpha = 1 - math.abs(progress * 2 - 1)
+    alpha = alpha * alpha
+
+    love.graphics.setColor(self.colors.bg[1], self.colors.bg[2], self.colors.bg[3], alpha * 0.95)
+    love.graphics.rectangle("fill", 0, 0, w, h)
+
+    local scan_y = progress * h
+    local scan_glow = alpha * 0.55
+    love.graphics.setColor(self.colors.cyan[1], self.colors.cyan[2], self.colors.cyan[3], scan_glow * 0.3)
+    love.graphics.rectangle("fill", 0, scan_y - 10, w, 20)
+    love.graphics.setColor(self.colors.cyan[1], self.colors.cyan[2], self.colors.cyan[3], scan_glow)
+    love.graphics.rectangle("fill", 0, scan_y - 1, w, 2)
+
+    if alpha > 0.6 then
+        local noise_alpha = (alpha - 0.6) * 0.15
+        local t = love.timer.getTime()
+        for i = 0, 5 do
+            local ny = math.floor(math.sin(t * 73.1 + i * 17.3) * 0.5 * h + h * 0.5)
+            love.graphics.setColor(self.colors.very_dim[1], self.colors.very_dim[2], self.colors.very_dim[3], noise_alpha)
+            love.graphics.rectangle("fill", 0, ny, w, 1)
+        end
+    end
 end
 
 function MenuUI:drawBackground(w, h)
@@ -701,13 +784,16 @@ function MenuUI:drawBackground(w, h)
 end
 
 function MenuUI:drawBox(x, y, w, h)
+    local t = love.timer.getTime()
+    local breathe = 1.0 + 0.08 * math.sin(t * 1.2 + x * 0.005 + y * 0.003)
+
     love.graphics.setColor(self.colors.very_dim[1], self.colors.very_dim[2], self.colors.very_dim[3], 0.35)
     love.graphics.rectangle("fill", x + 1, y + 1, w - 2, h - 2)
-    love.graphics.setColor(self.colors.border)
+    love.graphics.setColor(self.colors.border[1], self.colors.border[2], self.colors.border[3], breathe)
     love.graphics.rectangle("line", x, y, w, h)
 
     local tick = 8
-    love.graphics.setColor(self.colors.cyan[1], self.colors.cyan[2], self.colors.cyan[3], 0.45)
+    love.graphics.setColor(self.colors.cyan[1], self.colors.cyan[2], self.colors.cyan[3], 0.45 * breathe)
     love.graphics.line(x, y, x + tick, y)
     love.graphics.line(x, y, x, y + tick)
     love.graphics.line(x + w, y, x + w - tick, y)
@@ -718,7 +804,7 @@ function MenuUI:drawBox(x, y, w, h)
     love.graphics.line(x + w, y + h, x + w, y + h - tick)
 end
 
-function MenuUI:drawPanel(x, y, w, h, title, accent)
+function MenuUI:drawPanel(x, y, w, h, title, accent, badge)
     self:drawBox(x, y, w, h)
     local unit = self:getRhythmUnit()
     local header_text_y = y + math.floor((PANEL_HEADER_H - self.font_bold:getHeight()) * 0.5) - 1
@@ -743,6 +829,28 @@ function MenuUI:drawPanel(x, y, w, h, title, accent)
     love.graphics.setColor(ac)
     love.graphics.print(title, title_x, header_text_y)
 
+    local title_end_x = title_x + title_w + unit
+    local dash_right = x + w - unit * 2
+    if badge then
+        love.graphics.setFont(self.font)
+        local badge_w = self.font:getWidth(badge)
+        local badge_x = dash_right - badge_w
+        dash_right = badge_x - unit * 1.5
+
+        local dot_pulse = 0.5 + 0.4 * math.sin(t * 2.8 + x * 0.02)
+        love.graphics.setColor(ac[1], ac[2], ac[3], dot_pulse)
+        love.graphics.circle("fill", badge_x - unit * 0.8, y + math.floor(PANEL_HEADER_H * 0.5), 2.5)
+        love.graphics.setColor(ac[1], ac[2], ac[3], 0.45)
+        love.graphics.print(badge, badge_x, header_text_y + 1)
+        love.graphics.setFont(self.font_bold)
+    end
+
+    if dash_right - title_end_x > unit * 3 then
+        love.graphics.setColor(ac[1], ac[2], ac[3], 0.12 + pulse * 0.5)
+        local dash_y = y + math.floor(PANEL_HEADER_H * 0.5)
+        love.graphics.rectangle("fill", title_end_x, dash_y, dash_right - title_end_x, 1)
+    end
+
     love.graphics.setColor(self.colors.border)
     love.graphics.rectangle("fill", x + 1, y + PANEL_HEADER_H - 1, w - 2, 1)
 
@@ -759,9 +867,11 @@ function MenuUI:drawPanel(x, y, w, h, title, accent)
     love.graphics.setColor(ac[1], ac[2], ac[3], 0.38)
     love.graphics.rectangle("fill", sweep_x, underline_y, math.min(unit * 2, title_x + underline_w - sweep_x), 1)
 
-    local beacon_x = x + w - unit * 2
-    love.graphics.setColor(ac[1], ac[2], ac[3], 0.25 + pulse)
-    love.graphics.circle("fill", beacon_x, y + math.floor(PANEL_HEADER_H * 0.5), 2)
+    if not badge then
+        local beacon_x = x + w - unit * 2
+        love.graphics.setColor(ac[1], ac[2], ac[3], 0.25 + pulse)
+        love.graphics.circle("fill", beacon_x, y + math.floor(PANEL_HEADER_H * 0.5), 2)
+    end
 end
 
 function MenuUI:drawInlineSegments(x, y, segments, active_font)
@@ -918,7 +1028,7 @@ function MenuUI:drawTitleScreen(w, h)
     love.graphics.setColor(self.colors.very_dim)
     love.graphics.print(os.date("%H:%M:%S"), signal_x, top + math.floor(unit * 0.2))
 
-    self:drawPanel(layout.menu.panel.x, layout.menu.panel.y, layout.menu.panel.w, layout.menu.panel.h, "TERMINAL ACCESS", self.colors.header)
+    self:drawPanel(layout.menu.panel.x, layout.menu.panel.y, layout.menu.panel.w, layout.menu.panel.h, "TERMINAL ACCESS", self.colors.header, "LINKED")
 
     love.graphics.setFont(self.font)
     for i, option in ipairs(title_options) do
@@ -930,7 +1040,7 @@ function MenuUI:drawTitleScreen(w, h)
     local right_y = layout.right.y
     local right_w = layout.right.w
     local right_h = layout.right.h
-    self:drawPanel(right_x, right_y, right_w, right_h, "SELECTION DOSSIER", self.colors.amber)
+    self:drawPanel(right_x, right_y, right_w, right_h, "SELECTION DOSSIER", self.colors.amber, "LIVE")
     local inner_x = layout.right.inner_x
     local inner_w = layout.right.inner_w
     local content_y = layout.right.content_top
@@ -1037,6 +1147,11 @@ function MenuUI:drawTitleScreen(w, h)
     local credit = "made with <3 by vinny"
     self:drawFooterRow(footer_left_x, footer_right_x, footer_y, self:getTitleHelpSegments(), credit)
 
+    if math.floor(t * 2.2) % 2 == 0 then
+        love.graphics.setColor(self.colors.dim[1], self.colors.dim[2], self.colors.dim[3], 0.5)
+        love.graphics.print("_", footer_left_x - unit * 2, footer_y)
+    end
+
     local save_notice = self.get_save_notice()
     if save_notice and #save_notice > 0 then
         love.graphics.setColor(self.colors.amber)
@@ -1057,11 +1172,11 @@ function MenuUI:drawSettingsScreen(w, h)
     local box_y = layout.panel.y
     local box_w = layout.panel.w
     local box_h = layout.panel.h
-    self:drawPanel(box_x, box_y, box_w, box_h, "SETTINGS", self.colors.header)
+    self:drawPanel(box_x, box_y, box_w, box_h, "SETTINGS", self.colors.header, "ACTIVE")
 
     love.graphics.setFont(self.font_title)
     love.graphics.setColor(self.colors.bright)
-    love.graphics.print("SETTINGS", layout.content_x, layout.title_y)
+    love.graphics.print("LOCAL RUNTIME", layout.content_x, layout.title_y)
 
     love.graphics.setFont(self.font)
     love.graphics.setColor(self.colors.dim)
@@ -1085,9 +1200,21 @@ function MenuUI:drawSettingsScreen(w, h)
         love.graphics.setColor(selected and self.colors.bright or (hovered and self.colors.header or self.colors.text))
         love.graphics.print(option.label, label_x + shift, text_y)
 
-        if option.kind ~= "action" then
+        if option.kind == "number" then
+            self:drawVolumeBar(item, self.get_settings()[option.key], selected, text_y, layout.value_pad)
+        elseif option.kind ~= "action" then
             love.graphics.setColor(selected and self.colors.cyan or self.colors.dim)
             love.graphics.printf(self:formatSettingValue(option), item.x, text_y, item.w - layout.value_pad, "right")
+        end
+    end
+
+    for _, sep_after in ipairs({2, 6}) do
+        local above = layout.items[sep_after]
+        local below = layout.items[sep_after + 1]
+        if above and below then
+            local sep_y = math.floor((above.y + above.h + below.y) / 2)
+            love.graphics.setColor(self.colors.border[1], self.colors.border[2], self.colors.border[3], 0.18)
+            love.graphics.rectangle("fill", layout.content_x, sep_y, layout.content_w, 1)
         end
     end
 
@@ -1107,7 +1234,7 @@ function MenuUI:drawPauseOverlay(w, h)
     local box_y = layout.panel.y
     local box_w = layout.panel.w
     local box_h = layout.panel.h
-    self:drawPanel(box_x, box_y, box_w, box_h, "SESSION PAUSED", self.colors.amber)
+    self:drawPanel(box_x, box_y, box_w, box_h, "SESSION PAUSED", self.colors.amber, "HOLD")
 
     love.graphics.setFont(self.font_large)
     love.graphics.setColor(self.colors.bright)
@@ -1120,20 +1247,29 @@ function MenuUI:drawPauseOverlay(w, h)
 end
 
 function MenuUI:draw(app_state, w, h)
+    local handled = false
     if app_state == "title" then
         self:drawTitleScreen(w, h)
-        return true
+        handled = true
     elseif app_state == "settings" then
         self:drawSettingsScreen(w, h)
-        return true
+        handled = true
     elseif app_state == "pause" then
         self:drawPauseOverlay(w, h)
-        return true
+        handled = true
     end
-    return false
+
+    if self.transition.active then
+        self:drawTransitionOverlay(w, h)
+        handled = true
+    end
+
+    return handled
 end
 
 function MenuUI:keypressed(app_state, key, isrepeat)
+    if self.transition.active then return true end
+
     if app_state == "title" then
         local title_options = self:getTitleOptions()
         if key == "up" and not isrepeat then
@@ -1162,10 +1298,10 @@ function MenuUI:keypressed(app_state, key, isrepeat)
             self:clearHover("settings")
             self.settings_index = (self.settings_index % #SETTINGS_OPTIONS) + 1
             self:playClick()
-        elseif key == "left" and not isrepeat then
+        elseif key == "left" then
             self:clearHover("settings")
             self.on_adjust_setting(SETTINGS_OPTIONS[self.settings_index], -1)
-        elseif key == "right" and not isrepeat then
+        elseif key == "right" then
             self:clearHover("settings")
             self.on_adjust_setting(SETTINGS_OPTIONS[self.settings_index], 1)
         elseif (key == "return" or key == "kpenter") and not isrepeat then
@@ -1207,6 +1343,8 @@ function MenuUI:keypressed(app_state, key, isrepeat)
 end
 
 function MenuUI:mousemoved(app_state, x, y)
+    if self.transition.active then return true end
+
     local _, _, inside = self:recordMousePosition(x, y)
     if not inside then
         if app_state == "title" or app_state == "settings" or app_state == "pause" then
@@ -1224,6 +1362,8 @@ function MenuUI:mousemoved(app_state, x, y)
 end
 
 function MenuUI:mousepressed(app_state, x, y, button)
+    if self.transition.active then return true end
+
     if button ~= 1 then
         return false
     end
@@ -1260,6 +1400,8 @@ function MenuUI:mousepressed(app_state, x, y, button)
 end
 
 function MenuUI:wheelmoved(app_state, y)
+    if self.transition.active then return true end
+
     if app_state ~= "settings" or y == 0 then
         return false
     end

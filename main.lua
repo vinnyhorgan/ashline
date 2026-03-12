@@ -564,7 +564,9 @@ function love.load()
             elseif option == "NEW SESSION" then
                 startSession()
             elseif option == "SETTINGS" then
-                openSettings("title")
+                menu_ui:requestTransition(function()
+                    openSettings("title")
+                end)
             elseif option == "QUIT" then
                 love.event.quit()
             end
@@ -576,7 +578,9 @@ function love.load()
                 end
                 app_state = "game"
             elseif option == "SETTINGS" then
-                openSettings("pause")
+                menu_ui:requestTransition(function()
+                    openSettings("pause")
+                end)
             elseif option == "RESTART SESSION" then
                 startSession()
             elseif option == "QUIT TO TITLE" then
@@ -587,7 +591,9 @@ function love.load()
             adjustSetting(option, direction)
         end,
         on_close_settings = function()
-            closeSettings()
+            menu_ui:requestTransition(function()
+                closeSettings()
+            end)
         end,
         on_click = function()
             sound:click()
