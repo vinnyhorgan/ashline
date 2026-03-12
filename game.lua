@@ -1,4 +1,5 @@
 local data = require("data")
+local locale = require("locale")
 
 local Game = {}
 Game.__index = Game
@@ -559,66 +560,67 @@ function Game:unlockOverride(code)
 end
 
 function Game:getObjectives()
+    local function L(k) return locale.t(k) end
     if self.decisions_unlocked then
         return {
-            "Read any remaining files. Check your inbox one last time.",
-            "Use ACTIONS to review the final authorization set.",
-            "Choose what A-17, the silo, the sky, and Mira are worth to you.",
+            L("obj_read_all_vault"),
+            L("obj_choose_ending"),
+            L("obj_unlock_decision"),
         }
     end
 
     if self.flags["dawn_vault_unlocked"] or self.flags["surface_cache_decoded"] then
         return {
-            "Read the DAWN branch files — someone knew the surface was alive.",
-            "WIT-MIRA-001 is in the archive. Read it if you can bear it.",
-            "Run ACT-108 so the cost of disclosure is explicit, not imagined.",
+            L("obj_read_all_vault"),
+            L("obj_check_inbox"),
+            L("obj_deeper_vault"),
         }
     end
 
     if self.flags["doctrine_unlocked"] then
         return {
-            "Finish reading the black-vault doctrine files. DIR-9200 links to other silos.",
-            "DIR-ASSIGN-0031 explains how you ended up at this terminal.",
-            "Follow the DAWN references into external survey records.",
+            L("obj_read_all_vault"),
+            L("obj_check_personnel"),
+            L("obj_deeper_vault"),
         }
     end
 
     if self.flags["dawn_prompt"] then
         return {
-            "Search the external logs around West Mast 4 and DAWN.",
-            "Find what the continuity branch was hiding above the silo.",
-            "Expect the second truth to be worse, not cleaner.",
+            L("obj_find_overrides"),
+            L("obj_deeper_vault"),
+            L("obj_trace_systems"),
         }
     end
 
     if self.flags["annex_vault_unlocked"] then
         return {
-            "Read MLOG-ANN-0025 — the detainee manifest. Look for names you recognize.",
-            "INC-6410 documents a medical emergency. Read it if Sera matters to you.",
-            "WIT-KELL-001 is a message from inside the wall. Someone is writing to you.",
+            L("obj_read_all_vault"),
+            L("obj_compare_records"),
+            L("obj_check_personnel"),
         }
     end
 
     if self.flags["mirror_rebuilt"] then
         return {
-            "Use OVERRIDE LANTERN-17 to restore the annex occupancy branch.",
-            "Read any newly exposed annex files immediately.",
-            "Expect audit pressure to rise from this point onward.",
+            L("obj_find_overrides"),
+            L("obj_read_all_vault"),
+            L("obj_check_inbox"),
         }
     end
 
     if self.flags["msg_delivered_MSG-003"] then
         return {
-            "Decide whether to buy Naima time with ACT-101.",
-            "Read MLOG-ARC-0902 and any registry files tied to LANTERN.",
-            "Try PERSONNEL CIV-0031. Try reading your own file.",
+            L("obj_compare_records"),
+            L("obj_trace_systems"),
+            L("obj_check_personnel"),
         }
     end
 
     return {
-        "Start with INC-7301 and trace the retired A-17 branch.",
-        "Search for annex, nursery, lantern, or checksum drift.",
-        "Compare records when timelines or body counts do not align.",
+        L("obj_review_anomaly"),
+        L("obj_search_records"),
+        L("obj_check_inbox"),
     }
 end
 

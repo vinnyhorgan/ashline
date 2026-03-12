@@ -4079,4 +4079,175 @@ function data.searchPersonnel(keyword)
     return results
 end
 
+-- Language content swap
+local data_en_cache = nil
+local current_data_lang = "en"
+
+function data.applyLanguage(lang)
+    lang = lang or "en"
+    if lang == current_data_lang then return end
+
+    -- Cache English originals on first swap
+    if not data_en_cache then
+        data_en_cache = {
+            records = {},
+            messages = {},
+            personnel = {},
+            actions = {},
+            endings = {},
+            overrides = {},
+            systems = {},
+        }
+        for id, r in pairs(data.records) do
+            data_en_cache.records[id] = { title = r.title, content = r.content }
+        end
+        for id, m in pairs(data.messages) do
+            data_en_cache.messages[id] = { subject = m.subject, content = m.content }
+        end
+        for id, p in pairs(data.personnel) do
+            data_en_cache.personnel[id] = { role = p.role, notes = p.notes }
+        end
+        for id, a in pairs(data.actions) do
+            data_en_cache.actions[id] = { title = a.title, description = a.description, result = a.result }
+        end
+        for name, e in pairs(data.endings) do
+            data_en_cache.endings[name] = { title = e.title, lines = e.lines }
+        end
+        for code, o in pairs(data.overrides) do
+            data_en_cache.overrides[code] = { description = o.description }
+        end
+        for key, s in pairs(data.systems) do
+            data_en_cache.systems[key] = { name = s.name, details = s.details }
+        end
+    end
+
+    if lang == "it" then
+        local ok, data_it = pcall(require, "data_it")
+        if ok and data_it then
+            -- Swap record content
+            if data_it.records then
+                for id, it_r in pairs(data_it.records) do
+                    if data.records[id] then
+                        if it_r.title then data.records[id].title = it_r.title end
+                        if it_r.content then data.records[id].content = it_r.content end
+                    end
+                end
+            end
+            -- Swap message content
+            if data_it.messages then
+                for id, it_m in pairs(data_it.messages) do
+                    if data.messages[id] then
+                        if it_m.subject then data.messages[id].subject = it_m.subject end
+                        if it_m.content then data.messages[id].content = it_m.content end
+                    end
+                end
+            end
+            -- Swap personnel content
+            if data_it.personnel then
+                for id, it_p in pairs(data_it.personnel) do
+                    if data.personnel[id] then
+                        if it_p.role then data.personnel[id].role = it_p.role end
+                        if it_p.notes then data.personnel[id].notes = it_p.notes end
+                    end
+                end
+            end
+            -- Swap action content
+            if data_it.actions then
+                for id, it_a in pairs(data_it.actions) do
+                    if data.actions[id] then
+                        if it_a.title then data.actions[id].title = it_a.title end
+                        if it_a.description then data.actions[id].description = it_a.description end
+                        if it_a.result then data.actions[id].result = it_a.result end
+                    end
+                end
+            end
+            -- Swap ending content
+            if data_it.endings then
+                for name, it_e in pairs(data_it.endings) do
+                    if data.endings[name] then
+                        if it_e.title then data.endings[name].title = it_e.title end
+                        if it_e.lines then
+                            -- Handle both {text,color} segments and plain strings
+                            local converted = {}
+                            for i, line in ipairs(it_e.lines) do
+                                if type(line) == "table" then
+                                    converted[i] = line
+                                else
+                                    -- Use matching color from English original if available
+                                    local orig = data_en_cache.endings[name] and data_en_cache.endings[name].lines[i]
+                                    local c = orig and orig.color or colors.text
+                                    converted[i] = {text = line, color = c}
+                                end
+                            end
+                            data.endings[name].lines = converted
+                        end
+                    end
+                end
+            end
+            -- Swap override descriptions
+            if data_it.overrides then
+                for code, it_o in pairs(data_it.overrides) do
+                    if data.overrides[code] then
+                        if it_o.description then data.overrides[code].description = it_o.description end
+                    end
+                end
+            end
+            -- Swap system content
+            if data_it.systems then
+                for key, it_s in pairs(data_it.systems) do
+                    if data.systems[key] then
+                        if it_s.name then data.systems[key].name = it_s.name end
+                        if it_s.details then data.systems[key].details = it_s.details end
+                    end
+                end
+            end
+        end
+    else
+        -- Restore English originals
+        for id, en_r in pairs(data_en_cache.records) do
+            if data.records[id] then
+                data.records[id].title = en_r.title
+                data.records[id].content = en_r.content
+            end
+        end
+        for id, en_m in pairs(data_en_cache.messages) do
+            if data.messages[id] then
+                data.messages[id].subject = en_m.subject
+                data.messages[id].content = en_m.content
+            end
+        end
+        for id, en_p in pairs(data_en_cache.personnel) do
+            if data.personnel[id] then
+                data.personnel[id].role = en_p.role
+                data.personnel[id].notes = en_p.notes
+            end
+        end
+        for id, en_a in pairs(data_en_cache.actions) do
+            if data.actions[id] then
+                data.actions[id].title = en_a.title
+                data.actions[id].description = en_a.description
+                data.actions[id].result = en_a.result
+            end
+        end
+        for name, en_e in pairs(data_en_cache.endings) do
+            if data.endings[name] then
+                data.endings[name].title = en_e.title
+                data.endings[name].lines = en_e.lines
+            end
+        end
+        for code, en_o in pairs(data_en_cache.overrides) do
+            if data.overrides[code] then
+                data.overrides[code].description = en_o.description
+            end
+        end
+        for key, en_s in pairs(data_en_cache.systems) do
+            if data.systems[key] then
+                data.systems[key].name = en_s.name
+                data.systems[key].details = en_s.details
+            end
+        end
+    end
+    current_data_lang = lang
+end
+
 return data

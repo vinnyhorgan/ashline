@@ -1,5 +1,6 @@
 package.path = "./?.lua;./lib/?.lua;./lib/?/init.lua;" .. package.path
 
+local locale = require("locale")
 local Game = require("game")
 local commands = require("commands")
 local Save = require("save")

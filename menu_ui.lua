@@ -1,6 +1,8 @@
 local MenuUI = {}
 MenuUI.__index = MenuUI
 
+local locale = require("locale")
+
 local MENU_FRAME_INSET = 78
 local PANEL_HEADER_H = 38
 
@@ -11,6 +13,7 @@ local PAUSE_OPTIONS = {
 }
 
 local SETTINGS_OPTIONS = {
+    {key = "language", label = "Language", kind = "enum", values = {"en", "it"}, display = function(v) return locale.getLanguageDisplayValue(v) end},
     {key = "fullscreen", label = "Fullscreen", kind = "bool"},
     {key = "post_effects", label = "Post Effects", kind = "bool"},
     {key = "master_volume", label = "Master Volume", kind = "number", step = 0.05, min = 0, max = 1},
@@ -20,6 +23,23 @@ local SETTINGS_OPTIONS = {
     {key = "text_speed", label = "Text Speed", kind = "enum", values = {60, 120, 180, 300, 600}},
     {label = "Return", kind = "action"},
 }
+
+-- Map English menu keys to locale keys for display
+local MENU_DISPLAY_KEYS = {
+    ["CONTINUE SESSION"] = "continue_session",
+    ["NEW SESSION"]      = "new_session",
+    ["SETTINGS"]         = "settings_label",
+    ["QUIT"]             = "quit",
+    ["RESUME"]           = "resume",
+    ["RESTART SESSION"]  = "restart_session",
+    ["QUIT TO TITLE"]    = "quit_to_title",
+}
+
+local function localizeMenuLabel(label)
+    local key = MENU_DISPLAY_KEYS[label]
+    if key then return locale.t(key) end
+    return label
+end
 
 local function clamp(value, min_value, max_value)
     return math.max(min_value, math.min(max_value, value))
@@ -333,9 +353,9 @@ function MenuUI:buildSettingsLayout(w, h)
     local unit = t.unit
     local hint_segments = self:getSettingsHelpSegments()
     local widest_label = self:measureMaxWidth(SETTINGS_OPTIONS, self.font, function(option)
-        return option.label
+        return locale.t(option.key or "setting_return") or option.label
     end)
-    local widest_value = self:measureMaxWidth({"DELIBERATE", "MEASURED", "STANDARD", "INSTANT", "[==========] 100%"}, self.font)
+    local widest_value = self:measureMaxWidth({"DELIBERATE", "MEASURED", "STANDARD", "INSTANT", "ITALIANO", "[==========] 100%"}, self.font)
     local desired_w = widest_label + widest_value + unit * 22
     local box_w = clamp(desired_w, math.floor(w * 0.58), w - (t.frame_inset + unit * 2) * 2)
     local panel_x = math.floor((w - box_w) / 2)
@@ -654,11 +674,12 @@ end
 function MenuUI:formatSettingValue(option)
     local settings = self.get_settings()
     if option.kind == "bool" then
-        return settings[option.key] and "ON" or "OFF"
+        return settings[option.key] and locale.t("on") or locale.t("off")
     elseif option.kind == "number" then
         return tostring(math.floor(settings[option.key] * 100 + 0.5)) .. "%"
     elseif option.kind == "enum" then
         local value = settings[option.key]
+        if option.display then return option.display(value) end
         if value == 60 then return "DELIBERATE" end
         if value == 120 then return "MEASURED" end
         if value == 180 then return "STANDARD" end
@@ -986,6 +1007,7 @@ function MenuUI:drawInteractiveRow(item, selected, hovered, anim, accent)
 end
 
 function MenuUI:drawMenuOption(item, label, selected, hovered, anim, accent)
+    local display = localizeMenuLabel(label)
     local text_y = item.y + math.floor((item.h - self.font:getHeight()) * 0.5) - 1
     local prompt_x = item.x + math.floor(self:getRhythmUnit() * 1.75)
     local label_x = prompt_x + self.font:getWidth(">  ")
@@ -999,7 +1021,7 @@ function MenuUI:drawMenuOption(item, label, selected, hovered, anim, accent)
     end
 
     love.graphics.setColor(selected and self.colors.bright or (hovered and self.colors.header or self.colors.text))
-    love.graphics.print(label, label_x + shift, text_y)
+    love.graphics.print(display, label_x + shift, text_y)
 end
 
 function MenuUI:drawTitleScreen(w, h)
@@ -1224,7 +1246,7 @@ function MenuUI:drawSettingsScreen(w, h)
     local box_y = layout.panel.y
     local box_w = layout.panel.w
     local box_h = layout.panel.h
-    self:drawPanel(box_x, box_y, box_w, box_h, "SETTINGS", self.colors.header, "ACTIVE")
+    self:drawPanel(box_x, box_y, box_w, box_h, locale.t("settings_panel"), self.colors.header, locale.t("settings_badge"))
 
     love.graphics.setFont(self.font_title)
     love.graphics.setColor(self.colors.bright)
@@ -1250,13 +1272,14 @@ function MenuUI:drawSettingsScreen(w, h)
         end
 
         love.graphics.setColor(selected and self.colors.bright or (hovered and self.colors.header or self.colors.text))
-        love.graphics.print(option.label, label_x + shift, text_y)
+        local display_label = locale.t(option.key or "setting_return") or option.label
+        love.graphics.print(display_label, label_x + shift, text_y)
 
         if option.kind == "number" then
             self:drawVolumeBar(item, self.get_settings()[option.key], selected, text_y, layout.value_pad)
         elseif option.kind == "bool" then
             local on = self.get_settings()[option.key]
-            local value_text = on and "ON" or "OFF"
+            local value_text = on and locale.t("on") or locale.t("off")
             if on then
                 love.graphics.setColor(selected and self.colors.cyan or self.colors.text)
             else
@@ -1311,7 +1334,7 @@ function MenuUI:drawPauseOverlay(w, h)
 
     local layout = self:buildPauseLayout(w, h)
     local unit = self:getRhythmUnit()
-    self:drawPanel(layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h, "SESSION PAUSED", self.colors.amber, "HOLD")
+    self:drawPanel(layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h, locale.t("pause_badge"), self.colors.amber, "HOLD")
 
     love.graphics.setFont(self.font_large)
     love.graphics.setColor(self.colors.bright)

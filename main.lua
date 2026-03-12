@@ -13,6 +13,7 @@ local data = require("data")
 local Settings = require("settings")
 local Save = require("save")
 local utf8_utils = require("utf8_utils")
+local locale = require("locale")
 
 local VIRTUAL_W = Display.virtual_w
 local VIRTUAL_H = Display.virtual_h
@@ -198,6 +199,9 @@ local function applySettings(persist)
     local fullscreen_changed = false
     local effects_were_enabled = effect ~= nil
 
+    locale.setLanguage(settings.language or "en")
+    data.applyLanguage(settings.language or "en")
+
     if sound then
         sound:setMix(
             settings.master_volume,
@@ -249,10 +253,10 @@ local function updateHeader()
         {text = " | ", color = colors.border},
         {text = "2071.03.14 " .. time_str, color = colors.dim},
         {text = "    ", color = colors.bg},
-        {text = "ALERTS:", color = alert_color},
+        {text = locale.t("hdr_alerts") .. ":", color = alert_color},
         {text = tostring(game.alert_count), color = alert_color},
         {text = "  ", color = colors.bg},
-        {text = "INBOX:", color = inbox_color},
+        {text = locale.t("hdr_inbox") .. ":", color = inbox_color},
         {text = tostring(game:getUnreadCount()), color = inbox_color},
     })
 end

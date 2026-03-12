@@ -10,6 +10,7 @@ Settings.defaults = {
     ambient_volume = 0.15,
     tension_volume = 0.25,
     text_speed = 180,
+    language = "en",
 }
 
 local FILE_NAME = "settings.json"
@@ -78,6 +79,10 @@ function Settings.clamp(values)
 
     if values.fullscreen == nil then values.fullscreen = Settings.defaults.fullscreen end
     if values.post_effects == nil then values.post_effects = Settings.defaults.post_effects end
+
+    if values.language ~= "en" and values.language ~= "it" then
+        values.language = Settings.defaults.language
+    end
 
     return values
 end

@@ -1,7 +1,10 @@
 local colors = require("colors")
 local data = require("data")
+local locale = require("locale")
 
 local commands = {}
+
+local function L(k) return locale.t(k) end
 
 local COMMAND_LIST = {
     "HELP", "TASKS", "ACTIONS", "STATUS", "ALERTS", "READ", "SEARCH", "LIST",
@@ -64,19 +67,19 @@ local function format_record_header(id, record)
     table.insert(lines, {seg("  " .. record.title, colors.header)})
     table.insert(lines, separator())
     table.insert(lines, {
-        seg("  Classification: ", colors.dim),
+        seg(L("cmd_classification"), colors.dim),
         seg(record.classification, record.classification:find("BLACK VAULT") and colors.classified or colors.text),
     })
     table.insert(lines, {
-        seg("  Date:           ", colors.dim),
+        seg(L("cmd_date"), colors.dim),
         seg(record.date, colors.text),
     })
     table.insert(lines, {
-        seg("  Filed by:       ", colors.dim),
+        seg(L("cmd_filed_by"), colors.dim),
         seg(record.filed_by, colors.text),
     })
     table.insert(lines, {
-        seg("  Sector:         ", colors.dim),
+        seg(L("cmd_sector"), colors.dim),
         seg(record.sector, colors.text),
     })
     table.insert(lines, separator())
@@ -88,17 +91,17 @@ local function format_record_content(record)
     for _, text in ipairs(record.content) do
         if text == "" then
             table.insert(lines, blank())
-        elseif text:find("^%s*>") or text:find("WARNING") or text:find("ALERT") then
+        elseif text:find("^%s*>") or text:find("WARNING") or text:find("ALERT") or text:find("AVVISO") or text:find("ALLERTA") then
             table.insert(lines, {seg("  " .. text, colors.amber)})
-        elseif text:find("^%s*NOTE") or text:find("^%s*RECOMMENDATION") or text:find("^%s*Directive note") then
+        elseif text:find("^%s*NOTE") or text:find("^%s*NOTA") or text:find("^%s*RECOMMENDATION") or text:find("^%s*RACCOMANDAZIONE") or text:find("^%s*Directive note") or text:find("^%s*Nota direttiva") then
             table.insert(lines, {seg("  " .. text, colors.cyan)})
-        elseif text:find("OVERRIDE CODE") or text:find("BLACK VAULT") then
+        elseif text:find("OVERRIDE CODE") or text:find("CODICE OVERRIDE") or text:find("BLACK VAULT") or text:find("VAULT NERO") then
             table.insert(lines, {seg("  " .. text, colors.classified)})
-        elseif text:find("^%s*Q:") then
+        elseif text:find("^%s*Q:") or text:find("^%s*D:") then
             table.insert(lines, {seg("  " .. text, colors.dim)})
-        elseif text:find("^%s*A:") then
+        elseif text:find("^%s*A:") or text:find("^%s*R:") then
             table.insert(lines, {seg("  " .. text, colors.text)})
-        elseif text:find("Cross%-reference") then
+        elseif text:find("Cross%-reference") or text:find("Riferimento incrociato") then
             table.insert(lines, {seg("  " .. text, colors.cyan)})
         else
             table.insert(lines, {seg("  " .. text, colors.text)})
@@ -112,7 +115,7 @@ local function format_record_footer(record)
     if record.related and #record.related > 0 then
         table.insert(lines, blank())
         table.insert(lines, {
-            seg("  Related: ", colors.dim),
+            seg(L("cmd_related"), colors.dim),
             seg(table.concat(record.related, ", "), colors.cyan),
         })
     end
@@ -125,30 +128,30 @@ local handlers = {}
 function handlers.HELP(_game, _args)
     local out = {}
     table.insert(out, separator())
-    table.insert(out, header_line("  AVAILABLE COMMANDS"))
+    table.insert(out, header_line(L("cmd_available")))
     table.insert(out, separator())
     table.insert(out, blank())
 
     local cmds = {
-        {"HELP",                "Show this help screen"},
-        {"TASKS",               "List current investigation objectives"},
-        {"ACTIONS",             "Show currently available authorizations"},
-        {"STATUS",              "Display system overview and pressure metrics"},
-        {"ALERTS",              "Show the active anomaly queue"},
-        {"INBOX",               "View messages"},
-        {"READ <id>",           "Read a record (for example READ INC-7301)"},
-        {"READ MSG <n>",        "Read message number n from inbox"},
-        {"SEARCH <keyword>",    "Search records by keyword"},
-        {"LIST [category]",     "List records by type"},
-        {"PERSONNEL <id>",      "View a personnel file"},
-        {"COMPARE <id1> <id2>", "Compare two records"},
-        {"INSPECT <system>",    "Inspect water, power, air, population, or external"},
-        {"TRACE <resource>",    "Trace water, power, air, population, or external flow"},
-        {"OVERRIDE <token>",    "Use a discovered override token"},
-        {"AUTHORIZE <act-id>",  "Execute an available action"},
-        {"DENY <act-id>",       "Deny an action without executing it"},
-        {"CLEAR",               "Clear the terminal screen"},
-        {"LOGOUT",              "End the session"},
+        {"HELP",                L("cmd_help_help")},
+        {"TASKS",               L("cmd_help_tasks")},
+        {"ACTIONS",             L("cmd_help_actions")},
+        {"STATUS",              L("cmd_help_status")},
+        {"ALERTS",              L("cmd_help_alerts")},
+        {"INBOX",               L("cmd_help_inbox")},
+        {"READ <id>",           L("cmd_help_read")},
+        {"READ MSG <n>",        L("cmd_help_read_msg")},
+        {"SEARCH <keyword>",    L("cmd_help_search")},
+        {"LIST [category]",     L("cmd_help_list")},
+        {"PERSONNEL <id>",      L("cmd_help_personnel")},
+        {"COMPARE <id1> <id2>", L("cmd_help_compare")},
+        {"INSPECT <system>",    L("cmd_help_inspect")},
+        {"TRACE <resource>",    L("cmd_help_trace")},
+        {"OVERRIDE <token>",    L("cmd_help_override")},
+        {"AUTHORIZE <act-id>",  L("cmd_help_authorize")},
+        {"DENY <act-id>",       L("cmd_help_deny")},
+        {"CLEAR",               L("cmd_help_clear")},
+        {"LOGOUT",              L("cmd_help_logout")},
     }
 
     for _, cmd in ipairs(cmds) do
@@ -159,7 +162,7 @@ function handlers.HELP(_game, _args)
     end
 
     table.insert(out, blank())
-    table.insert(out, dim_line("  Use Tab for autocomplete. Up/Down for history. Page Up/Down to scroll."))
+    table.insert(out, dim_line(L("cmd_help_footer")))
     table.insert(out, separator())
     return out
 end
@@ -167,7 +170,7 @@ end
 function handlers.TASKS(game, _args)
     local out = {}
     table.insert(out, separator())
-    table.insert(out, header_line("  CURRENT OBJECTIVES"))
+    table.insert(out, header_line(L("cmd_objectives")))
     table.insert(out, separator())
     table.insert(out, blank())
 
@@ -188,12 +191,12 @@ function handlers.ACTIONS(game, _args)
     local actions = game:getAvailableActions()
 
     table.insert(out, separator())
-    table.insert(out, header_line("  AVAILABLE AUTHORIZATIONS"))
+    table.insert(out, header_line(L("cmd_actions_hdr")))
     table.insert(out, separator())
     table.insert(out, blank())
 
     if #actions == 0 then
-        table.insert(out, dim_line("  No actions are currently available."))
+        table.insert(out, dim_line(L("cmd_no_actions")))
     else
         for _, entry in ipairs(actions) do
             local action = entry.action
@@ -216,7 +219,7 @@ function handlers.STATUS(game, _args)
     local stats = game:getStats()
 
     table.insert(out, separator())
-    table.insert(out, header_line("  SILO MERIDIAN - OPERATOR STATUS"))
+    table.insert(out, header_line(L("cmd_status_hdr")))
     table.insert(out, separator())
     table.insert(out, blank())
 
@@ -236,15 +239,15 @@ function handlers.STATUS(game, _args)
     end
 
     table.insert(out, blank())
-    table.insert(out, {seg("  Proof gathered:      ", colors.dim), seg(tostring(stats.proof), colors.bright)})
-    table.insert(out, {seg("  Audit risk:          ", colors.dim), seg(tostring(stats.risk), stats.risk >= 5 and colors.red or colors.amber)})
-    table.insert(out, {seg("  Silo strain:         ", colors.dim), seg(tostring(stats.strain), stats.strain >= 5 and colors.red or colors.amber)})
-    table.insert(out, {seg("  Mercy score:         ", colors.dim), seg(tostring(stats.mercy), colors.text)})
-    table.insert(out, {seg("  Complicity score:    ", colors.dim), seg(tostring(stats.complicity), colors.text)})
-    table.insert(out, {seg("  Records examined:    ", colors.dim), seg(tostring(stats.records), colors.text)})
-    table.insert(out, {seg("  Unread messages:     ", colors.dim), seg(tostring(game:getUnreadCount()), game:getUnreadCount() > 0 and colors.cyan or colors.dim)})
+    table.insert(out, {seg(L("cmd_proof"), colors.dim), seg(tostring(stats.proof), colors.bright)})
+    table.insert(out, {seg(L("cmd_risk"), colors.dim), seg(tostring(stats.risk), stats.risk >= 5 and colors.red or colors.amber)})
+    table.insert(out, {seg(L("cmd_strain"), colors.dim), seg(tostring(stats.strain), stats.strain >= 5 and colors.red or colors.amber)})
+    table.insert(out, {seg(L("cmd_mercy"), colors.dim), seg(tostring(stats.mercy), colors.text)})
+    table.insert(out, {seg(L("cmd_complicity"), colors.dim), seg(tostring(stats.complicity), colors.text)})
+    table.insert(out, {seg(L("cmd_records_exam"), colors.dim), seg(tostring(stats.records), colors.text)})
+    table.insert(out, {seg(L("cmd_unread_msgs"), colors.dim), seg(tostring(game:getUnreadCount()), game:getUnreadCount() > 0 and colors.cyan or colors.dim)})
     table.insert(out, blank())
-    table.insert(out, dim_line("  Use TASKS when the thread of the investigation gets messy."))
+    table.insert(out, dim_line(L("cmd_status_hint")))
     table.insert(out, separator())
     return out
 end
@@ -252,7 +255,7 @@ end
 function handlers.ALERTS(game, _args)
     local out = {}
     table.insert(out, separator())
-    table.insert(out, header_line("  ACTIVE ALERTS"))
+    table.insert(out, header_line(L("cmd_alerts_hdr")))
     table.insert(out, separator())
     table.insert(out, blank())
 
@@ -355,10 +358,10 @@ function handlers.READ(game, args)
 
         local out = {}
         table.insert(out, separator())
-        table.insert(out, {seg("  MESSAGE: ", colors.dim), seg(entry.id, colors.bright)})
-        table.insert(out, {seg("  From:    ", colors.dim), seg(msg.from, msg.from == "UNKNOWN TERMINAL" and colors.amber or colors.text)})
-        table.insert(out, {seg("  Subject: ", colors.dim), seg(msg.subject, colors.header)})
-        table.insert(out, {seg("  Priority:", colors.dim), seg(" " .. msg.priority, (msg.priority == "PRIORITY-1" or msg.priority == "URGENT") and colors.red or colors.text)})
+        table.insert(out, {seg(L("cmd_message_label"), colors.dim), seg(entry.id, colors.bright)})
+        table.insert(out, {seg(L("cmd_from"), colors.dim), seg(msg.from, msg.from == "UNKNOWN TERMINAL" and colors.amber or colors.text)})
+        table.insert(out, {seg(L("cmd_subject"), colors.dim), seg(msg.subject, colors.header)})
+        table.insert(out, {seg(L("cmd_priority"), colors.dim), seg(" " .. msg.priority, (msg.priority == "PRIORITY-1" or msg.priority == "URGENT") and colors.red or colors.text)})
         table.insert(out, separator())
         table.insert(out, blank())
 
@@ -369,7 +372,7 @@ function handlers.READ(game, args)
                 table.insert(out, {seg("  " .. text, colors.amber)})
             elseif text:find("ACT%-") then
                 table.insert(out, {seg("  " .. text, colors.cyan)})
-            elseif text:find("OVERRIDE CODE") then
+            elseif text:find("OVERRIDE CODE") or text:find("CODICE OVERRIDE") then
                 table.insert(out, {seg("  " .. text, colors.classified)})
             else
                 table.insert(out, {seg("  " .. text, colors.text)})
@@ -390,11 +393,11 @@ function handlers.READ(game, args)
     if not game:canAccessRecord(id) then
         local out = {}
         table.insert(out, separator())
-        table.insert(out, {seg("  ACCESS DENIED", colors.red)})
+        table.insert(out, {seg(L("cmd_access_denied"), colors.red)})
         table.insert(out, blank())
         table.insert(out, {seg(record.lock_reason or "  Record is locked behind a higher classification gate.", colors.amber)})
         table.insert(out, blank())
-        table.insert(out, {seg("  Continue investigating. Search for override tokens or related files.", colors.dim)})
+        table.insert(out, {seg(L("cmd_override_hint"), colors.dim)})
         table.insert(out, separator())
         return out
     end
@@ -411,7 +414,7 @@ end
 
 function handlers.SEARCH(game, args)
     if not args or #args == 0 then
-        return {line("  ERROR: Usage: SEARCH <keyword>", colors.red)}
+        return {line("  " .. L("cmd_search_hint"), colors.red)}
     end
 
     local keyword = table.concat(args, " ")
@@ -421,15 +424,15 @@ function handlers.SEARCH(game, args)
     local out = {}
     table.insert(out, separator())
     table.insert(out, {
-        seg("  SEARCH RESULTS: ", colors.dim),
+        seg(L("cmd_search_results"), colors.dim),
         seg('"' .. keyword .. '"', colors.bright),
-        seg("  (" .. #results .. " found)", colors.dim),
+        seg("  (" .. #results .. L("cmd_found"), colors.dim),
     })
     table.insert(out, separator())
 
     if #results == 0 then
         table.insert(out, blank())
-        table.insert(out, dim_line("  No records matched your search."))
+        table.insert(out, dim_line(L("cmd_no_results")))
     else
         table.insert(out, blank())
         for _, result in ipairs(results) do
@@ -446,7 +449,7 @@ function handlers.SEARCH(game, args)
             else
                 table.insert(out, {
                     seg("  " .. string.format("%-16s", result.id), colors.classified),
-                    seg("[LOCKED - OVERRIDE REQUIRED]", colors.classified),
+                    seg(L("cmd_locked_label"), colors.classified),
                 })
             end
             table.insert(out, blank())
@@ -483,9 +486,9 @@ function handlers.LIST(game, args)
     local out = {}
     table.insert(out, separator())
     table.insert(out, {
-        seg("  RECORD INDEX", colors.header),
+        seg(L("cmd_record_index"), colors.header),
         seg(type_filter and ("  [" .. type_filter:upper() .. "]") or "  [ALL]", colors.dim),
-        seg("  (" .. #results .. " records)", colors.dim),
+        seg("  (" .. #results .. L("cmd_records_label"), colors.dim),
     })
     table.insert(out, separator())
     table.insert(out, blank())
@@ -504,7 +507,7 @@ function handlers.LIST(game, args)
             table.insert(out, {
                 seg("  " .. read_marker, colors.classified),
                 seg(string.format("%-16s", result.id), colors.classified),
-                seg("[LOCKED]", colors.classified),
+                seg(L("cmd_locked"), colors.classified),
             })
         end
     end
@@ -544,13 +547,13 @@ function handlers.PERSONNEL(game, args)
 
     local out = {}
     table.insert(out, separator())
-    table.insert(out, {seg("  PERSONNEL FILE: ", colors.dim), seg(id, colors.bright)})
+    table.insert(out, {seg(L("cmd_personnel_file"), colors.dim), seg(id, colors.bright)})
     table.insert(out, separator())
-    table.insert(out, {seg("  Name:       ", colors.dim), seg(person.name, colors.header)})
-    table.insert(out, {seg("  Role:       ", colors.dim), seg(person.role, colors.text)})
-    table.insert(out, {seg("  Sector:     ", colors.dim), seg(person.sector, colors.text)})
-    table.insert(out, {seg("  Clearance:  ", colors.dim), seg("Level " .. person.clearance, colors.text)})
-    table.insert(out, {seg("  Status:     ", colors.dim), seg(person.status, person.status == "ACTIVE" and colors.bright or colors.red)})
+    table.insert(out, {seg(L("cmd_name"), colors.dim), seg(person.name, colors.header)})
+    table.insert(out, {seg(L("cmd_role"), colors.dim), seg(person.role, colors.text)})
+    table.insert(out, {seg(L("cmd_sector_label"), colors.dim), seg(person.sector, colors.text)})
+    table.insert(out, {seg(L("cmd_clearance"), colors.dim), seg(L("cmd_level") .. person.clearance, colors.text)})
+    table.insert(out, {seg(L("cmd_status_label"), colors.dim), seg(person.status, person.status == "ACTIVE" and colors.bright or colors.red)})
     table.insert(out, separator())
     table.insert(out, blank())
     for _, note in ipairs(person.notes) do
@@ -581,9 +584,9 @@ function handlers.COMPARE(game, args)
     local out = {}
     table.insert(out, separator())
     table.insert(out, {
-        seg("  COMPARISON: ", colors.dim),
+        seg(L("cmd_comparison"), colors.dim),
         seg(id1, colors.bright),
-        seg(" vs ", colors.dim),
+        seg(L("cmd_vs"), colors.dim),
         seg(id2, colors.bright),
     })
     table.insert(out, separator())
@@ -591,7 +594,7 @@ function handlers.COMPARE(game, args)
 
     table.insert(out, {seg("  +-- " .. id1 .. " -----------------------------------", colors.cyan)})
     table.insert(out, {seg("  | " .. r1.title, colors.header)})
-    table.insert(out, {seg("  | Date: " .. r1.date .. "  |  By: " .. r1.filed_by, colors.dim)})
+    table.insert(out, {seg("  | " .. L("cmd_date"):gsub("^%s+","") .. r1.date .. "  |  " .. L("cmd_filed_by"):gsub("^%s+","") .. r1.filed_by, colors.dim)})
     for _, text in ipairs(r1.content) do
         table.insert(out, {seg(text == "" and "  |" or ("  | " .. text), colors.text)})
     end
@@ -600,7 +603,7 @@ function handlers.COMPARE(game, args)
 
     table.insert(out, {seg("  +-- " .. id2 .. " -----------------------------------", colors.amber)})
     table.insert(out, {seg("  | " .. r2.title, colors.header)})
-    table.insert(out, {seg("  | Date: " .. r2.date .. "  |  By: " .. r2.filed_by, colors.dim)})
+    table.insert(out, {seg("  | " .. L("cmd_date"):gsub("^%s+","") .. r2.date .. "  |  " .. L("cmd_filed_by"):gsub("^%s+","") .. r2.filed_by, colors.dim)})
     for _, text in ipairs(r2.content) do
         table.insert(out, {seg(text == "" and "  |" or ("  | " .. text), colors.text)})
     end
@@ -609,11 +612,11 @@ function handlers.COMPARE(game, args)
 
     local analysis = commands.getComparisonAnalysis(id1, id2)
     if analysis then
-        table.insert(out, {seg("  +== DISCREPANCY ANALYSIS ===========================", colors.classified)})
+        table.insert(out, {seg(L("cmd_discrepancy"), colors.classified)})
         for _, text in ipairs(analysis) do
             table.insert(out, {seg("  | " .. text, colors.amber)})
         end
-        table.insert(out, {seg("  +=================================================", colors.classified)})
+        table.insert(out, {seg(L("cmd_discrepancy_end"), colors.classified)})
     end
 
     table.insert(out, separator())
@@ -623,22 +626,22 @@ end
 
 function handlers.INSPECT(_game, args)
     if not args or #args == 0 then
-        return {line("  ERROR: Usage: INSPECT <system> (water/power/air/population/external)", colors.red)}
+        return {line(L("cmd_inspect_hint"), colors.red)}
     end
 
     local key = args[1]:lower()
     local sys = data.systems[key]
     if not sys then
-        return {line("  ERROR: Unknown system '" .. args[1] .. "'. Available: water, power, air, population, external", colors.red)}
+        return {line(L("cmd_trace_unknown"), colors.red)}
     end
 
     local out = {}
     table.insert(out, separator())
     table.insert(out, header_line("  " .. sys.name))
     table.insert(out, {
-        seg("  Sector: ", colors.dim),
+        seg(L("cmd_sector_prefix"), colors.dim),
         seg(sys.sector, colors.text),
-        seg("  |  Status: ", colors.dim),
+        seg(L("cmd_status_prefix"), colors.dim),
         seg(sys.status, sys.status == "NOMINAL" and colors.bright or colors.amber),
     })
     table.insert(out, separator())
@@ -646,7 +649,7 @@ function handlers.INSPECT(_game, args)
     for _, text in ipairs(sys.details) do
         if text == "" then
             table.insert(out, blank())
-        elseif text:find(">") or text:find("WARNING") or text:find("ALERT") then
+        elseif text:find(">") or text:find("WARNING") or text:find("ALERT") or text:find("AVVISO") or text:find("ALLERTA") then
             table.insert(out, {seg("  " .. text, colors.amber)})
         else
             table.insert(out, {seg("  " .. text, colors.text)})
@@ -659,7 +662,7 @@ end
 
 function handlers.TRACE(game, args)
     if not args or #args == 0 then
-        return {line("  ERROR: Usage: TRACE <resource> (water/power/air/population/external)", colors.red)}
+        return {line(L("cmd_trace_hint"), colors.red)}
     end
 
     local resource = args[1]:lower()
@@ -667,62 +670,62 @@ function handlers.TRACE(game, args)
 
     if resource == "water" or resource == "wtr" then
         table.insert(out, separator())
-        table.insert(out, header_line("  WATER DISTRIBUTION TRACE"))
+        table.insert(out, header_line(L("cmd_trace_hdr") .. "WATER"))
         table.insert(out, separator())
         table.insert(out, blank())
-        table.insert(out, {seg("  Source: Primary Aquifer / Sector 6", colors.text)})
-        table.insert(out, {seg("  Total output: 11,940 L/day", colors.text)})
+        table.insert(out, {seg(L("trace_water_source"), colors.text)})
+        table.insert(out, {seg(L("trace_water_output"), colors.text)})
         table.insert(out, blank())
-        table.insert(out, {seg("  |-- Public sectors: 11,102 L/day", colors.text)})
-        table.insert(out, {seg("  |-- Known reserve:    226 L/day", colors.text)})
-        table.insert(out, {seg("  |-- Retired branch A-17:", colors.cyan)})
-        table.insert(out, {seg("  |   +-- 612.4 L/day [UNDECLARED DRAW]", colors.red)})
-        table.insert(out, {seg("  |   +-- Curve smoothing indicates human interference", colors.amber)})
+        table.insert(out, {seg(L("trace_water_public"), colors.text)})
+        table.insert(out, {seg(L("trace_water_reserve"), colors.text)})
+        table.insert(out, {seg(L("trace_water_a17"), colors.cyan)})
+        table.insert(out, {seg(L("trace_water_draw"), colors.red)})
+        table.insert(out, {seg(L("trace_water_curve"), colors.amber)})
         table.insert(out, blank())
         game:onSearchPerformed("trace water")
     elseif resource == "power" or resource == "pwr" then
         table.insert(out, separator())
-        table.insert(out, header_line("  POWER DISTRIBUTION TRACE"))
+        table.insert(out, header_line(L("cmd_trace_hdr") .. "POWER"))
         table.insert(out, separator())
         table.insert(out, blank())
-        table.insert(out, {seg("  Source: Geothermal Stack / Sector 7", colors.text)})
-        table.insert(out, {seg("  Public load: 2,203 kWh/day", colors.text)})
-        table.insert(out, {seg("  Legacy annex feeder loss: 41 kWh/day", colors.amber)})
+        table.insert(out, {seg(L("trace_power_source"), colors.text)})
+        table.insert(out, {seg(L("trace_power_public"), colors.text)})
+        table.insert(out, {seg(L("trace_power_annex"), colors.amber)})
         table.insert(out, blank())
         game:onSearchPerformed("trace power")
     elseif resource == "air" then
         table.insert(out, separator())
-        table.insert(out, header_line("  AIR CIRCULATION TRACE"))
+        table.insert(out, header_line(L("cmd_trace_hdr") .. "AIR"))
         table.insert(out, separator())
         table.insert(out, blank())
-        table.insert(out, {seg("  Main scrubber loop nominal across public sectors.", colors.text)})
-        table.insert(out, {seg("  Branch AF-A17 tagged DORMANT but continues media consumption.", colors.amber)})
-        table.insert(out, {seg("  Residue profile: cloth, skin, candle carbon, cooked starch.", colors.text)})
+        table.insert(out, {seg(L("trace_air_main"), colors.text)})
+        table.insert(out, {seg(L("trace_air_a17"), colors.amber)})
+        table.insert(out, {seg(L("trace_air_residue"), colors.text)})
         table.insert(out, blank())
         game:onSearchPerformed("trace air")
     elseif resource == "population" or resource == "pop" then
         table.insert(out, separator())
-        table.insert(out, header_line("  POPULATION TRACE"))
+        table.insert(out, header_line(L("cmd_trace_hdr") .. "POPULATION"))
         table.insert(out, separator())
         table.insert(out, blank())
-        table.insert(out, {seg("  Public ledger total: 2,146", colors.text)})
-        table.insert(out, {seg("  Hidden mirror leaves: 64", colors.red)})
-        table.insert(out, {seg("  Branch tag recovered: LANTERN", colors.amber)})
+        table.insert(out, {seg(L("trace_pop_public"), colors.text)})
+        table.insert(out, {seg(L("trace_pop_hidden"), colors.red)})
+        table.insert(out, {seg(L("trace_pop_tag"), colors.amber)})
         table.insert(out, blank())
         game:onSearchPerformed("trace population")
     elseif resource == "external" or resource == "ext" or resource == "surface" then
         table.insert(out, separator())
-        table.insert(out, header_line("  EXTERNAL ACCESS TRACE"))
+        table.insert(out, header_line(L("cmd_trace_hdr") .. "EXTERNAL"))
         table.insert(out, separator())
         table.insert(out, blank())
-        table.insert(out, {seg("  West Mast 4: dormant on public maps, heartbeat current on hidden line", colors.text)})
-        table.insert(out, {seg("  Suppressor mask: D-DAWN-4", colors.amber)})
-        table.insert(out, {seg("  Recent event: clean-signal interval detected before forced channel closure", colors.text)})
-        table.insert(out, {seg("  Shaft servo: maintained despite retirement order", colors.text)})
+        table.insert(out, {seg(L("trace_ext_mast"), colors.text)})
+        table.insert(out, {seg(L("trace_ext_mask"), colors.amber)})
+        table.insert(out, {seg(L("trace_ext_signal"), colors.text)})
+        table.insert(out, {seg(L("trace_ext_servo"), colors.text)})
         table.insert(out, blank())
         game:onSearchPerformed("trace external")
     else
-        return {line("  ERROR: Unknown resource. Available: water, power, air, population, external", colors.red)}
+        return {line(L("cmd_trace_unknown"), colors.red)}
     end
 
     table.insert(out, separator())
@@ -731,7 +734,7 @@ end
 
 function handlers.OVERRIDE(game, args)
     if not args or #args == 0 then
-        return {line("  ERROR: Usage: OVERRIDE <token>", colors.red)}
+        return {line(L("cmd_override_usage"), colors.red)}
     end
 
     local token = table.concat(args, " ")
@@ -739,12 +742,12 @@ function handlers.OVERRIDE(game, args)
     local out = {}
 
     table.insert(out, separator())
-    table.insert(out, {seg("  OVERRIDE TOKEN: ", colors.dim), seg(token:upper(), colors.classified)})
+    table.insert(out, {seg(L("cmd_override_token"), colors.dim), seg(token:upper(), colors.classified)})
     table.insert(out, separator())
     table.insert(out, blank())
 
     if not result.ok then
-        table.insert(out, {seg("  ACCESS REJECTED", colors.red)})
+        table.insert(out, {seg(L("cmd_access_reject"), colors.red)})
         table.insert(out, {seg("  " .. result.message, colors.amber)})
         table.insert(out, blank())
         table.insert(out, separator())
@@ -752,18 +755,18 @@ function handlers.OVERRIDE(game, args)
     end
 
     if result.already then
-        table.insert(out, {seg("  TOKEN ALREADY APPLIED", colors.amber)})
-        table.insert(out, {seg("  The associated branch is already open on this terminal.", colors.text)})
+        table.insert(out, {seg(L("cmd_token_applied"), colors.amber)})
+        table.insert(out, {seg(L("cmd_token_open"), colors.text)})
         table.insert(out, blank())
         table.insert(out, separator())
         return out
     end
 
-    table.insert(out, {seg("  OVERRIDE ACCEPTED", colors.bright)})
+    table.insert(out, {seg(L("cmd_override_ok"), colors.bright)})
     table.insert(out, {seg("  " .. result.entry.title, colors.header)})
     table.insert(out, {seg("  " .. result.entry.description, colors.text)})
     table.insert(out, blank())
-    table.insert(out, {seg("  Unlocked records:", colors.dim)})
+    table.insert(out, {seg(L("cmd_unlocked_recs"), colors.dim)})
     for _, record_id in ipairs(result.entry.unlocks or {}) do
         table.insert(out, {seg("    " .. record_id, colors.cyan)})
     end
@@ -776,14 +779,14 @@ function handlers.INBOX(game, _args)
     local out = {}
     table.insert(out, separator())
     table.insert(out, {
-        seg("  INBOX", colors.header),
-        seg("  (" .. #game.inbox .. " messages, " .. game:getUnreadCount() .. " unread)", colors.dim),
+        seg(L("cmd_inbox_hdr"), colors.header),
+        seg("  (" .. #game.inbox .. L("cmd_messages_count") .. game:getUnreadCount() .. L("cmd_unread_count"), colors.dim),
     })
     table.insert(out, separator())
     table.insert(out, blank())
 
     if #game.inbox == 0 then
-        table.insert(out, dim_line("  No messages."))
+        table.insert(out, dim_line(L("cmd_no_messages")))
     else
         for i, entry in ipairs(game.inbox) do
             local msg = entry.message
@@ -814,33 +817,33 @@ end
 
 function handlers.AUTHORIZE(game, args)
     if not args or #args == 0 then
-        return {line("  ERROR: Usage: AUTHORIZE <action-id>", colors.red)}
+        return {line(L("cmd_auth_usage"), colors.red)}
     end
 
     local id = args[1]:upper()
     local action = data.actions[id]
     if not action then
-        return {line("  ERROR: Unknown action '" .. id .. "'. Use ACTIONS to inspect the live set.", colors.red)}
+        return {line(L("cmd_no_action"), colors.red)}
     end
 
     if not game:isActionAvailable(id) then
-        return {line("  ERROR: Action " .. id .. " is not currently available.", colors.amber)}
+        return {line(L("cmd_no_action"), colors.amber)}
     end
 
     local result = game:executeAction(id)
     if not result then
-        return {line("  ERROR: Failed to execute action " .. id .. ".", colors.red)}
+        return {line(L("cmd_no_action"), colors.red)}
     end
 
     local out = {}
     table.insert(out, separator())
-    table.insert(out, {seg("  AUTHORIZATION REQUEST: ", colors.amber), seg(id, colors.bright)})
+    table.insert(out, {seg(L("cmd_auth_request"), colors.amber), seg(id, colors.bright)})
     table.insert(out, separator())
     table.insert(out, blank())
     table.insert(out, {seg("  " .. action.title, colors.header)})
     table.insert(out, {seg("  " .. action.description, colors.text)})
     table.insert(out, blank())
-    table.insert(out, {seg("  PROCESSING...", colors.amber)})
+    table.insert(out, {seg(L("cmd_processing"), colors.amber)})
     table.insert(out, blank())
 
     for _, text in ipairs(result.notes or {}) do
@@ -849,7 +852,7 @@ function handlers.AUTHORIZE(game, args)
 
     if result.ending then
         table.insert(out, blank())
-        table.insert(out, {seg("  === AUTHORIZATION CONFIRMED ===", colors.bright)})
+        table.insert(out, {seg(L("cmd_auth_confirmed"), colors.bright)})
     end
 
     table.insert(out, separator())
@@ -858,13 +861,13 @@ end
 
 function handlers.DENY(_game, args)
     if not args or #args == 0 then
-        return {line("  ERROR: Usage: DENY <action-id>", colors.red)}
+        return {line(L("cmd_deny_usage"), colors.red)}
     end
     local id = args[1]:upper()
     if not data.actions[id] then
-        return {line("  ERROR: Unknown action '" .. id .. "'.", colors.red)}
+        return {line(L("cmd_no_action"), colors.red)}
     end
-    return {line("  Action " .. id .. " denied. Nothing changed.", colors.text)}
+    return {line(L("cmd_denial_logged") .. id, colors.text)}
 end
 
 function handlers.CLEAR(_game, _args)
@@ -878,6 +881,10 @@ end
 function commands.getComparisonAnalysis(id1, id2)
     local key = id1 .. ":" .. id2
     local rkey = id2 .. ":" .. id1
+
+    -- Check for localized comparison first
+    local localized = locale.getComparison(id1, id2)
+    if localized then return localized end
 
     local analyses = {
         ["INC-7301:MLOG-WTR-4408"] = {
@@ -1333,9 +1340,9 @@ function commands.execute(game, input_text)
     end
 
     return {{
-        {text = "  ERROR: Unknown command '", color = colors.red},
+        {text = L("cmd_unknown_pre"), color = colors.red},
         {text = cmd, color = colors.bright},
-        {text = "'. Type HELP for available commands.", color = colors.red},
+        {text = L("cmd_unknown_post"), color = colors.red},
     }}
 end
 

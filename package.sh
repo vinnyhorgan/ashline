@@ -22,6 +22,8 @@ RUNTIME_LUA=(
     game.lua
     commands.lua
     data.lua
+    data_it.lua
+    locale.lua
     terminal.lua
     menu_ui.lua
     sound.lua
