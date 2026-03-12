@@ -10,7 +10,7 @@ local commands = require("commands")
 local data = require("data")
 local Settings = require("settings")
 local Save = require("save")
-local utf8 = require("utf8")
+local utf8_utils = require("utf8_utils")
 
 local VIRTUAL_W = Display.virtual_w
 local VIRTUAL_H = Display.virtual_h
@@ -68,38 +68,11 @@ local function resetInputState()
 end
 
 local function utf8_len(text)
-    local ok, len = pcall(utf8.len, text or "")
-    if ok then
-        return len
-    end
-    return #(text or "")
+    return utf8_utils.len(text)
 end
 
 local function utf8_sub(text, i, j)
-    text = text or ""
-    i = math.max(1, i or 1)
-
-    local start_byte = utf8.offset(text, i)
-    if not start_byte then
-        return ""
-    end
-
-    local end_byte
-    if j then
-        if j < i then
-            return ""
-        end
-        end_byte = utf8.offset(text, j + 1)
-        if end_byte then
-            end_byte = end_byte - 1
-        else
-            end_byte = #text
-        end
-    else
-        end_byte = #text
-    end
-
-    return text:sub(start_byte, end_byte)
+    return utf8_utils.sub(text, i, j)
 end
 
 local function clampInputCursor(text, cursor)
@@ -606,13 +579,6 @@ function love.load()
         end,
         on_click = function()
             sound:click()
-        end,
-        render_terminal_overlay = function(w, h, alpha)
-            if terminal then
-                terminal:render()
-            end
-            love.graphics.setColor(0, 0, 0, alpha)
-            love.graphics.rectangle("fill", 0, 0, w, h)
         end,
     })
 

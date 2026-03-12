@@ -74,7 +74,6 @@ function MenuUI.new(opts)
     self.on_adjust_setting = assert(opts.on_adjust_setting, "on_adjust_setting is required")
     self.on_close_settings = assert(opts.on_close_settings, "on_close_settings is required")
     self.on_click = opts.on_click
-    self.render_terminal_overlay = opts.render_terminal_overlay
 
     self.title_index = 1
     self.pause_index = 1
@@ -927,6 +926,15 @@ function MenuUI:drawInlineSegments(x, y, segments, active_font)
     end
 end
 
+function MenuUI:drawBlinkingCursor(x, y, alpha)
+    local cw = math.max(2, math.floor(self.font:getWidth("A") * 0.55))
+    local ch = self.font:getHeight() - 2
+    if math.floor(love.timer.getTime() * 2.0) % 2 == 0 then
+        love.graphics.setColor(self.colors.text[1], self.colors.text[2], self.colors.text[3], alpha or 0.45)
+        love.graphics.rectangle("fill", x, y, cw, ch)
+    end
+end
+
 function MenuUI:drawFooterRow(left_x, right_x, y, segments, right_text)
     local help_x = left_x
     if right_text then
@@ -1199,11 +1207,7 @@ function MenuUI:drawTitleScreen(w, h)
     self:drawFooterRow(footer_left_x, footer_right_x, footer_y, self:getTitleHelpSegments(), credit)
 
     local cw = math.max(2, math.floor(self.font:getWidth("A") * 0.55))
-    local ch = self.font:getHeight() - 2
-    if math.floor(t * 2.0) % 2 == 0 then
-        love.graphics.setColor(self.colors.text[1], self.colors.text[2], self.colors.text[3], 0.5)
-        love.graphics.rectangle("fill", footer_left_x - cw - unit, footer_y + 1, cw, ch)
-    end
+    self:drawBlinkingCursor(footer_left_x - cw - unit, footer_y + 1, 0.5)
 
     local save_notice = self.get_save_notice()
     if save_notice and #save_notice > 0 then
@@ -1286,11 +1290,7 @@ function MenuUI:drawSettingsScreen(w, h)
     self:drawFooterRow(layout.content_x, layout.content_x + layout.content_w, layout.hint_y, layout.hint_segments)
 
     local cw = math.max(2, math.floor(self.font:getWidth("A") * 0.55))
-    local ch = self.font:getHeight() - 2
-    if math.floor(love.timer.getTime() * 2.0) % 2 == 0 then
-        love.graphics.setColor(self.colors.text[1], self.colors.text[2], self.colors.text[3], 0.45)
-        love.graphics.rectangle("fill", layout.content_x - cw - unit, layout.hint_y + 1, cw, ch)
-    end
+    self:drawBlinkingCursor(layout.content_x - cw - unit, layout.hint_y + 1)
 end
 
 function MenuUI:drawPauseOverlay(w, h)
@@ -1327,7 +1327,7 @@ function MenuUI:drawPauseOverlay(w, h)
     love.graphics.setColor(self.colors.dim)
     love.graphics.print("Session suspended.", layout.content_x, layout.subtitle_y)
 
-    love.graphics.setFont(self.font)
+    love.graphics.setColor(self.colors.text)
     for i, option in ipairs(PAUSE_OPTIONS) do
         self:drawMenuOption(layout.items[i], option, i == self.pause_index, self.menu_hover.pause == i, self.menu_anim.pause[i], self.colors.amber)
     end
@@ -1339,32 +1339,21 @@ function MenuUI:drawPauseOverlay(w, h)
 
     -- Blinking cursor
     local cw = math.max(2, math.floor(self.font:getWidth("A") * 0.55))
-    local ch = self.font:getHeight() - 2
-    if math.floor(t * 2.0) % 2 == 0 then
-        love.graphics.setColor(self.colors.text[1], self.colors.text[2], self.colors.text[3], 0.45)
-        love.graphics.rectangle("fill", layout.content_x - cw - unit, layout.hint_y + 1, cw, ch)
-    end
+    self:drawBlinkingCursor(layout.content_x - cw - unit, layout.hint_y + 1)
 end
 
 function MenuUI:draw(app_state, w, h)
-    local handled = false
     if app_state == "title" then
         self:drawTitleScreen(w, h)
-        handled = true
     elseif app_state == "settings" then
         self:drawSettingsScreen(w, h)
-        handled = true
     elseif app_state == "pause" then
         self:drawPauseOverlay(w, h)
-        handled = true
     end
 
     if self.transition.active then
         self:drawTransitionOverlay(w, h)
-        handled = true
     end
-
-    return handled
 end
 
 function MenuUI:keypressed(app_state, key, isrepeat)

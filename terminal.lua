@@ -1,5 +1,9 @@
 local colors = require("colors")
 
+local utf8_utils = require("utf8_utils")
+local utf8_sub = utf8_utils.sub
+local utf8_len = utf8_utils.len
+
 local Terminal = {}
 Terminal.__index = Terminal
 
@@ -8,28 +12,6 @@ local MARGIN_Y = 12
 local HEADER_LINES = 2
 local STATUS_LINES = 1
 local INPUT_LINES = 1
-
-local utf8 = require("utf8")
-
-local function utf8_sub(s, i, j)
-    local start_byte = utf8.offset(s, i)
-    if not start_byte then return "" end
-    local end_byte
-    if j then
-        end_byte = utf8.offset(s, j + 1)
-        if end_byte then end_byte = end_byte - 1 else end_byte = #s end
-    else
-        end_byte = #s
-    end
-    return s:sub(start_byte, end_byte)
-end
-
-local function utf8_len(s)
-    if not s then return 0 end
-    local ok, len = pcall(utf8.len, s)
-    if ok then return len end
-    return #s
-end
 
 local function wrap_segments(segments, cols)
     if cols <= 0 then return {{}} end
