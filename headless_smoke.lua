@@ -4,6 +4,8 @@ local locale = require("locale")
 local Game = require("game")
 local commands = require("commands")
 local Save = require("save")
+local data_it = require("data_it")
+local utf8_utils = require("utf8_utils")
 local RUNTIME_SLOT = "__ashline_test_" .. ((jit and "luajit") or ((_VERSION or "lua"):gsub("%W+", "_"):lower()))
 
 local function assert_true(value, message)
@@ -247,6 +249,12 @@ local function verify_save_roundtrip()
     Save.delete(slot)
 end
 
+local function verify_utf8_layout_regression()
+    local subject = data_it.messages["MSG-001"].subject
+    assert_true(subject ~= nil, "italian MSG-001 subject should exist")
+    assert_true(utf8_utils.len(subject) < #subject, "utf8 len should differ from byte length for italian subject")
+end
+
 local function run()
     local game = Game.new()
     game:start()
@@ -262,6 +270,7 @@ local function run()
     verify_ending("ACT-204", "open_broadcast", false)
     verify_ending("ACT-205", "ashline_doctrine", true)
     verify_save_roundtrip()
+    verify_utf8_layout_regression()
 
     print("headless smoke: ok")
 end

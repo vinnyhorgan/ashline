@@ -85,7 +85,7 @@ end
 local function boxLineSegments(segments, total_width, border_color)
     local len = 0
     for _, seg in ipairs(segments) do
-        len = len + #(seg.text or "")
+        len = len + utf8_len(seg.text or "")
     end
     local result = {}
     for _, seg in ipairs(segments) do
