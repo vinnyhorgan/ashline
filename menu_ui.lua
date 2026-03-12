@@ -95,6 +95,7 @@ function MenuUI.new(opts)
         y = 0,
         inside = false,
     }
+    self.pause_enter_time = 0
     self.transition = {
         active = false,
         timer = 0,
@@ -371,12 +372,20 @@ end
 function MenuUI:buildPauseLayout(w, h)
     local t = self:getTokens()
     local unit = t.unit
-    local box_w = clamp(self:measureMaxWidth(PAUSE_OPTIONS, self.font) + unit * 12, math.floor(w * 0.28), math.floor(w * 0.42))
+    local hint_segs = self:getPauseHelpSegments()
+    local inner_pad = math.floor(unit * 1.9)
+    local content_min = math.max(
+        self:measureMaxWidth(PAUSE_OPTIONS, self.font) + unit * 10,
+        self.font:getWidth("Session suspended.") + unit * 4,
+        measureSegmentsWidth(self.font, hint_segs) + unit * 4
+    )
+    local box_w = clamp(content_min + inner_pad * 2, math.floor(w * 0.30), math.floor(w * 0.50))
     local panel_x = math.floor((w - box_w) / 2)
+    local hint_block_h = self.font:getHeight() + math.floor(unit * 2.8)
     local list_opts = {
-        inner_pad_x = math.floor(unit * 1.9),
-        top_pad = self.font_large:getHeight() + math.floor(unit * 2.3),
-        bottom_pad = math.floor(unit * 2.1),
+        inner_pad_x = inner_pad,
+        top_pad = self.font_large:getHeight() + self.font:getHeight() + math.floor(unit * 3.6),
+        bottom_pad = hint_block_h + math.floor(unit * 1.6),
         row_h = self.font:getHeight() + math.floor(unit * 1.0),
         row_gap = self.font:getHeight() + math.floor(unit * 1.05),
     }
@@ -384,12 +393,18 @@ function MenuUI:buildPauseLayout(w, h)
     local panel_y = math.floor((h - preview.panel.h) / 2)
     local list = self:buildListLayout(panel_x, panel_y, box_w, #PAUSE_OPTIONS, self.font, list_opts)
     local content_x = (list.items[1] and list.items[1].x) or (list.panel.x + t.panel_pad_x)
+    local content_w = (list.panel.x + list.panel.w - t.panel_pad_x) - content_x
 
     return {
         panel = list.panel,
         items = list.items,
         content_x = content_x,
+        content_w = content_w,
         title_y = list.panel.y + PANEL_HEADER_H + math.floor(unit * 1.4),
+        subtitle_y = list.panel.y + PANEL_HEADER_H + self.font_large:getHeight() + math.floor(unit * 2.4),
+        hint_rule_y = list.panel.y + list.panel.h - hint_block_h,
+        hint_y = list.panel.y + list.panel.h - self.font:getHeight() - math.floor(unit * 1.2),
+        hint_segments = hint_segs,
     }
 end
 
@@ -422,6 +437,19 @@ function MenuUI:getSettingsHelpSegments()
         {text = "  |  ", color = self.colors.border},
         {text = "Esc", color = self.colors.text},
         {text = " back", color = self.colors.dim},
+    }
+end
+
+function MenuUI:getPauseHelpSegments()
+    return {
+        {text = "Esc", color = self.colors.text},
+        {text = " resume", color = self.colors.dim},
+        {text = "  |  ", color = self.colors.border},
+        {text = "Up/Down", color = self.colors.text},
+        {text = " move", color = self.colors.dim},
+        {text = "  |  ", color = self.colors.border},
+        {text = "Enter", color = self.colors.text},
+        {text = " select", color = self.colors.dim},
     }
 end
 
@@ -500,7 +528,7 @@ function MenuUI:requestTransition(callback, duration)
     self.transition = {
         active = true,
         timer = 0,
-        duration = duration or 0.30,
+        duration = duration or 0.38,
         callback = callback,
         fired = false,
     }
@@ -521,6 +549,7 @@ end
 
 function MenuUI:enterPause()
     self.pause_index = 1
+    self.pause_enter_time = love.timer.getTime()
     self:clearHover("settings")
     self:setCursorStyle(false)
 end
@@ -670,20 +699,23 @@ function MenuUI:drawTransitionOverlay(w, h)
     local alpha = 1 - math.abs(progress * 2 - 1)
     alpha = alpha * alpha
 
-    love.graphics.setColor(self.colors.bg[1], self.colors.bg[2], self.colors.bg[3], alpha * 0.95)
+    -- Full black overlay for strong contrast
+    love.graphics.setColor(0, 0, 0, alpha * 0.98)
     love.graphics.rectangle("fill", 0, 0, w, h)
 
+    -- Bright cyan scan line
     local scan_y = progress * h
-    local scan_glow = alpha * 0.55
-    love.graphics.setColor(self.colors.cyan[1], self.colors.cyan[2], self.colors.cyan[3], scan_glow * 0.3)
-    love.graphics.rectangle("fill", 0, scan_y - 10, w, 20)
+    local scan_glow = alpha * 0.8
+    love.graphics.setColor(self.colors.cyan[1], self.colors.cyan[2], self.colors.cyan[3], scan_glow * 0.4)
+    love.graphics.rectangle("fill", 0, scan_y - 14, w, 28)
     love.graphics.setColor(self.colors.cyan[1], self.colors.cyan[2], self.colors.cyan[3], scan_glow)
     love.graphics.rectangle("fill", 0, scan_y - 1, w, 2)
 
-    if alpha > 0.6 then
-        local noise_alpha = (alpha - 0.6) * 0.15
+    -- Static noise
+    if alpha > 0.4 then
+        local noise_alpha = (alpha - 0.4) * 0.2
         local t = love.timer.getTime()
-        for i = 0, 5 do
+        for i = 0, 7 do
             local ny = math.floor(math.sin(t * 73.1 + i * 17.3) * 0.5 * h + h * 0.5)
             love.graphics.setColor(self.colors.very_dim[1], self.colors.very_dim[2], self.colors.very_dim[3], noise_alpha)
             love.graphics.rectangle("fill", 0, ny, w, 1)
@@ -1181,8 +1213,9 @@ function MenuUI:drawTitleScreen(w, h)
 end
 
 function MenuUI:drawSettingsScreen(w, h)
-    if self.get_settings_return_state() == "pause" and self.render_terminal_overlay then
-        self.render_terminal_overlay(w, h, 0.62)
+    if self.get_settings_return_state() == "pause" then
+        love.graphics.setColor(0, 0, 0, 0.65)
+        love.graphics.rectangle("fill", 0, 0, w, h)
     else
         self:drawBackground(w, h)
     end
@@ -1261,25 +1294,55 @@ function MenuUI:drawSettingsScreen(w, h)
 end
 
 function MenuUI:drawPauseOverlay(w, h)
-    if self.render_terminal_overlay then
-        self.render_terminal_overlay(w, h, 0.52)
+    local t = love.timer.getTime()
+
+    -- Smooth fade-in
+    local fade_dur = 0.35
+    local elapsed = t - (self.pause_enter_time or 0)
+    local fade = math.min(1, elapsed / fade_dur)
+    fade = 1 - (1 - fade) * (1 - fade)
+
+    love.graphics.setColor(0, 0, 0, 0.78 * fade)
+    love.graphics.rectangle("fill", 0, 0, w, h)
+
+    -- Ambient scan lines over dimmed terminal
+    if fade > 0.3 then
+        local noise_alpha = (fade - 0.3) * 0.04
+        for i = 0, 3 do
+            local ny = math.floor(math.sin(t * 0.8 + i * 3.7) * 0.35 * h + h * 0.5)
+            love.graphics.setColor(self.colors.cyan[1], self.colors.cyan[2], self.colors.cyan[3], noise_alpha)
+            love.graphics.rectangle("fill", 0, ny, w, 1)
+        end
     end
 
     local layout = self:buildPauseLayout(w, h)
     local unit = self:getRhythmUnit()
-    local box_x = layout.panel.x
-    local box_y = layout.panel.y
-    local box_w = layout.panel.w
-    local box_h = layout.panel.h
-    self:drawPanel(box_x, box_y, box_w, box_h, "SESSION PAUSED", self.colors.amber, "HOLD")
+    self:drawPanel(layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h, "SESSION PAUSED", self.colors.amber, "HOLD")
 
     love.graphics.setFont(self.font_large)
     love.graphics.setColor(self.colors.bright)
     love.graphics.print("PAUSED", layout.content_x, layout.title_y)
 
     love.graphics.setFont(self.font)
+    love.graphics.setColor(self.colors.dim)
+    love.graphics.print("Session suspended.", layout.content_x, layout.subtitle_y)
+
+    love.graphics.setFont(self.font)
     for i, option in ipairs(PAUSE_OPTIONS) do
         self:drawMenuOption(layout.items[i], option, i == self.pause_index, self.menu_hover.pause == i, self.menu_anim.pause[i], self.colors.amber)
+    end
+
+    -- Footer
+    love.graphics.setColor(self.colors.border[1], self.colors.border[2], self.colors.border[3], 0.28)
+    love.graphics.rectangle("fill", layout.content_x, layout.hint_rule_y, layout.content_w, 1)
+    self:drawFooterRow(layout.content_x, layout.content_x + layout.content_w, layout.hint_y, layout.hint_segments)
+
+    -- Blinking cursor
+    local cw = math.max(2, math.floor(self.font:getWidth("A") * 0.55))
+    local ch = self.font:getHeight() - 2
+    if math.floor(t * 2.0) % 2 == 0 then
+        love.graphics.setColor(self.colors.text[1], self.colors.text[2], self.colors.text[3], 0.45)
+        love.graphics.rectangle("fill", layout.content_x - cw - unit, layout.hint_y + 1, cw, ch)
     end
 end
 

@@ -525,8 +525,11 @@ function love.load()
     local term_cw = font:getWidth("A")
     local term_w = 110 * term_cw + 40
 
-    terminal = Terminal.new(font, font_bold, term_w, VIRTUAL_H)
+    local term_pad_y = 24
+    local term_h = VIRTUAL_H - term_pad_y * 2
+    terminal = Terminal.new(font, font_bold, term_w, term_h)
     terminal.offset_x = math.floor((VIRTUAL_W - term_w) / 2)
+    terminal.offset_y = term_pad_y
 
     sound = Sound.new()
     sound:load()
@@ -573,18 +576,24 @@ function love.load()
         end,
         on_pause_select = function(option)
             if option == "RESUME" then
-                if menu_ui then
-                    menu_ui:deactivate()
-                end
-                app_state = "game"
+                menu_ui:requestTransition(function()
+                    if menu_ui then
+                        menu_ui:deactivate()
+                    end
+                    app_state = "game"
+                end, 0.18)
             elseif option == "SETTINGS" then
                 menu_ui:requestTransition(function()
                     openSettings("pause")
                 end)
             elseif option == "RESTART SESSION" then
-                startSession()
+                menu_ui:requestTransition(function()
+                    startSession()
+                end)
             elseif option == "QUIT TO TITLE" then
-                returnToTitle()
+                menu_ui:requestTransition(function()
+                    returnToTitle()
+                end)
             end
         end,
         on_adjust_setting = function(option, direction)
@@ -749,12 +758,13 @@ function love.draw()
         love.graphics.rectangle("fill", 0, 0, w, h)
 
         renderVirtual(function(vw, vh)
-            if menu_ui and menu_ui:draw(app_state, vw, vh) then
-                return
-            else
-                if terminal then
-                    drawScaledTerminal()
-                end
+            local in_game = game and (app_state == "game" or app_state == "boot" or app_state == "pause"
+                or (app_state == "settings" and settings_return_state == "pause"))
+            if in_game and terminal then
+                drawScaledTerminal()
+            end
+            if menu_ui then
+                menu_ui:draw(app_state, vw, vh)
             end
         end)
     end

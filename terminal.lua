@@ -96,6 +96,7 @@ function Terminal.new(font, font_bold, width, height)
     self.width = width or love.graphics.getWidth()
     self.height = height or love.graphics.getHeight()
     self.offset_x = 0
+    self.offset_y = 0
     self:recalcLayout()
 
     self.displayed_raw = {}
@@ -310,33 +311,85 @@ end
 
 function Terminal:render()
     love.graphics.push()
-    love.graphics.translate(self.offset_x, 0)
-
+    love.graphics.translate(self.offset_x, self.offset_y)
     love.graphics.setFont(self.font)
 
-    love.graphics.setColor(colors.bg)
-    love.graphics.rectangle("fill", 0, 0, self.width, self.height)
-
-    -- Terminal frame
-    love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.3)
-    love.graphics.rectangle("line", 0, 0, self.width, self.height)
-
+    local t = love.timer.getTime()
+    local w = self.width
+    local h = self.height
     local x0 = MARGIN_X
-    local y = MARGIN_Y
+    local breathe = 1.0 + 0.06 * math.sin(t * 1.0)
+    local sep_w = w - MARGIN_X * 2
 
-    -- header
+    -- Background
+    love.graphics.setColor(colors.bg)
+    love.graphics.rectangle("fill", 0, 0, w, h)
+
+    -- === FRAME ===
+    -- Outer border
+    love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.35 * breathe)
+    love.graphics.rectangle("line", 0, 0, w, h)
+    -- Inner border (subtle double-line)
+    love.graphics.setColor(colors.border[1], colors.border[2], colors.border[3], 0.12 * breathe)
+    love.graphics.rectangle("line", 3, 3, w - 6, h - 6)
+
+    -- Corner brackets
+    local cl = 18
+    love.graphics.setLineWidth(2)
+    love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.45 * breathe)
+    love.graphics.line(0, 0, cl, 0)
+    love.graphics.line(0, 0, 0, cl)
+    love.graphics.line(w, 0, w - cl, 0)
+    love.graphics.line(w, 0, w, cl)
+    love.graphics.line(0, h, cl, h)
+    love.graphics.line(0, h, 0, h - cl)
+    love.graphics.line(w, h, w - cl, h)
+    love.graphics.line(w, h, w, h - cl)
+    love.graphics.setLineWidth(1)
+
+    -- Vertical rail accents
+    love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.035)
+    love.graphics.rectangle("fill", 4, cl, 2, h - cl * 2)
+    love.graphics.rectangle("fill", w - 6, cl, 2, h - cl * 2)
+
+    -- Beacon dots
+    local bp = 0.35 + 0.3 * math.sin(t * 2.5)
+    love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], bp)
+    love.graphics.circle("fill", 9, 9, 2.5)
+    love.graphics.setColor(colors.header[1], colors.header[2], colors.header[3], 0.3 + 0.2 * math.sin(t * 2.1 + 1))
+    love.graphics.circle("fill", 17, 9, 2.5)
+
+    -- === HEADER SECTION ===
+    local y = MARGIN_Y
+    local header_h = self.char_h * HEADER_LINES
+
+    -- Header background fill
+    love.graphics.setColor(colors.very_dim[1], colors.very_dim[2], colors.very_dim[3], 0.18)
+    love.graphics.rectangle("fill", 1, 1, w - 2, MARGIN_Y + header_h)
+    -- Header left accent bar
+    love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.55)
+    love.graphics.rectangle("fill", 1, 1, 3, MARGIN_Y + header_h)
+    -- Header gradient overlay
+    love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.025)
+    love.graphics.rectangle("fill", 4, 1, math.floor(w * 0.3), MARGIN_Y + header_h)
+
     if #self.header_segments > 0 then
         draw_segments(self.header_segments, x0, y, self.font)
     end
-    y = y + self.char_h * HEADER_LINES
+    y = y + header_h
 
-    -- separator after header
-    love.graphics.setColor(colors.border)
+    -- Header separator with animated sweep
     local sep_y = y + math.floor(self.char_h / 2)
-    love.graphics.rectangle("fill", x0, sep_y, self.width - MARGIN_X * 2, 1)
+    love.graphics.setColor(colors.border)
+    love.graphics.rectangle("fill", x0, sep_y, sep_w, 1)
+    local sweep_x = (t * 45) % math.max(1, sep_w)
+    love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.18)
+    love.graphics.rectangle("fill", x0 + sweep_x, sep_y, math.min(35, sep_w - sweep_x), 1)
+    love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.05)
+    love.graphics.rectangle("fill", x0, sep_y + 1, math.floor(sep_w * 0.4), 1)
     y = y + self.char_h
 
-    -- content area
+    -- === CONTENT AREA ===
     local content_start_y = y
     local visible_start = math.max(1, #self.output - self.content_rows - self.scroll_offset + 1)
     local visible_end = math.min(#self.output, visible_start + self.content_rows - 1)
@@ -353,33 +406,53 @@ function Terminal:render()
     if self.scroll_offset > 0 then
         local ind_y = content_start_y + (self.content_rows - 1) * self.char_h
         love.graphics.setColor(colors.bg)
-        love.graphics.rectangle("fill", x0, ind_y, self.width - MARGIN_X * 2, self.char_h)
-        love.graphics.setColor(colors.amber)
+        love.graphics.rectangle("fill", x0, ind_y, sep_w, self.char_h)
+        local scroll_pulse = 0.7 + 0.3 * math.sin(t * 2.5)
+        love.graphics.setColor(colors.amber[1], colors.amber[2], colors.amber[3], scroll_pulse)
         local indicator = string.format("v %d more lines below v  (Page Down / Scroll)", self.scroll_offset)
         love.graphics.print(indicator, self.font, x0, ind_y)
     end
 
-    -- separator before status
+    -- === STATUS BAR ===
     local status_y = content_start_y + self.content_rows * self.char_h
-    love.graphics.setColor(colors.border)
+
+    -- Status separator with sweep
     local sep2_y = status_y + math.floor(self.char_h / 2)
-    love.graphics.rectangle("fill", x0, sep2_y, self.width - MARGIN_X * 2, 1)
+    love.graphics.setColor(colors.border)
+    love.graphics.rectangle("fill", x0, sep2_y, sep_w, 1)
+    local sweep2_x = ((t * 35 + 200) % math.max(1, sep_w))
+    love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.15)
+    love.graphics.rectangle("fill", x0 + sweep2_x, sep2_y, math.min(30, sep_w - sweep2_x), 1)
+    love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.05)
+    love.graphics.rectangle("fill", x0, sep2_y + 1, math.floor(sep_w * 0.4), 1)
     status_y = status_y + self.char_h
 
-    -- status bar
+    -- Status bar background
+    love.graphics.setColor(colors.very_dim[1], colors.very_dim[2], colors.very_dim[3], 0.12)
+    love.graphics.rectangle("fill", 1, status_y - 3, w - 2, self.char_h + 6)
+    -- Status left accent bar (amber)
+    love.graphics.setColor(colors.amber[1], colors.amber[2], colors.amber[3], 0.4)
+    love.graphics.rectangle("fill", 1, status_y - 3, 3, self.char_h + 6)
+
     if #self.status_segments > 0 then
         draw_segments(self.status_segments, x0, status_y, self.font)
     end
     status_y = status_y + self.char_h
 
-    -- separator before input
-    love.graphics.setColor(colors.border)
+    -- Input separator
     local sep3_y = status_y + math.floor(self.char_h / 2)
-    love.graphics.rectangle("fill", x0, sep3_y, self.width - MARGIN_X * 2, 1)
+    love.graphics.setColor(colors.border)
+    love.graphics.rectangle("fill", x0, sep3_y, sep_w, 1)
+    love.graphics.setColor(colors.cyan[1], colors.cyan[2], colors.cyan[3], 0.05)
+    love.graphics.rectangle("fill", x0, sep3_y + 1, math.floor(sep_w * 0.4), 1)
     status_y = status_y + self.char_h
 
-    -- input line
+    -- === INPUT LINE ===
     if self.show_input then
+        -- Input area background
+        love.graphics.setColor(colors.very_dim[1], colors.very_dim[2], colors.very_dim[3], 0.06)
+        love.graphics.rectangle("fill", 1, status_y - 2, w - 2, self.char_h + 4)
+
         love.graphics.setColor(colors.prompt)
         love.graphics.print("> ", self.font, x0, status_y)
         local input_x = x0 + self.char_w * 2
@@ -394,12 +467,26 @@ function Terminal:render()
             love.graphics.print(self.ghost_text, self.font, ghost_x, status_y)
         end
 
-        -- cursor
+        -- cursor with glow
         if self.cursor_visible then
             local cursor_x = input_x + self.font:getWidth(utf8_sub(self.input_text, 1, self.input_cursor))
+            love.graphics.setColor(colors.bright[1], colors.bright[2], colors.bright[3], 0.08)
+            love.graphics.rectangle("fill", cursor_x - 3, status_y - 2, self.char_w * 0.8 + 6, self.char_h + 4)
             love.graphics.setColor(colors.bright)
             love.graphics.rectangle("fill", cursor_x, status_y, self.char_w * 0.8, self.char_h)
         end
+    end
+
+    -- === AMBIENT SCAN LINE (full terminal height) ===
+    local total_h = h - MARGIN_Y * 2
+    if total_h > 0 then
+        local scan_period = 6.0
+        local scan_progress = (t % scan_period) / scan_period
+        local scan_line_y = MARGIN_Y + total_h * scan_progress
+        love.graphics.setColor(colors.text[1], colors.text[2], colors.text[3], 0.02)
+        love.graphics.rectangle("fill", 1, scan_line_y, w - 2, 1)
+        love.graphics.setColor(colors.text[1], colors.text[2], colors.text[3], 0.01)
+        love.graphics.rectangle("fill", 1, scan_line_y - 4, w - 2, 8)
     end
 
     love.graphics.pop()
