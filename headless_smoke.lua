@@ -255,6 +255,47 @@ local function verify_utf8_layout_regression()
     assert_true(utf8_utils.len(subject) < #subject, "utf8 len should differ from byte length for italian subject")
 end
 
+local function flatten_output(output)
+    if type(output) ~= "table" then
+        return ""
+    end
+
+    local lines = {}
+    for _, entry in ipairs(output) do
+        if type(entry) == "table" then
+            local text = {}
+            for _, segment in ipairs(entry) do
+                text[#text + 1] = segment.text or ""
+            end
+            lines[#lines + 1] = table.concat(text)
+        end
+    end
+    return table.concat(lines, "\n")
+end
+
+local function verify_italian_release_surface()
+    locale.setLanguage("it")
+    local data = require("data")
+    data.applyLanguage("it")
+
+    local game = Game.new()
+    game:start()
+    flush_messages(game, 4)
+
+    assert_true(type(exec(game, "AIUTO")) == "table", "AIUTO alias should work")
+    assert_true(type(exec(game, "ELENCA DIRETTIVE")) == "table", "ELENCA DIRETTIVE alias should work")
+    assert_true(type(exec(game, "TRACCIA superficie")) == "table", "TRACCIA superficie alias should work")
+    assert_true(type(exec(game, "ISPEZIONA INC-7301")) == "table", "ISPEZIONA record alias should work")
+    assert_true(type(exec(game, "POSTA")) == "table", "POSTA alias should work")
+
+    local inspect_output = exec(game, "ISPEZIONA INC-7301")
+    local inspect_text = flatten_output(inspect_output)
+    assert_true(inspect_text:find("METADATI DOCUMENTO", 1, true) ~= nil, "italian inspect should show record metadata")
+
+    locale.setLanguage("en")
+    data.applyLanguage("en")
+end
+
 local function run()
     local game = Game.new()
     game:start()
@@ -271,6 +312,7 @@ local function run()
     verify_ending("ACT-205", "ashline_doctrine", true)
     verify_save_roundtrip()
     verify_utf8_layout_regression()
+    verify_italian_release_surface()
 
     print("headless smoke: ok")
 end

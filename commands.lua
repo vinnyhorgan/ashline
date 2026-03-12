@@ -5,11 +5,40 @@ local locale = require("locale")
 local commands = {}
 
 local function L(k) return locale.t(k) end
+local function Lt(k, ...)
+    local value = locale.t(k)
+    if select("#", ...) > 0 then
+        return string.format(value, ...)
+    end
+    return value
+end
 
 local COMMAND_LIST = {
     "HELP", "TASKS", "ACTIONS", "STATUS", "ALERTS", "READ", "SEARCH", "LIST",
     "PERSONNEL", "COMPARE", "INSPECT", "TRACE", "OVERRIDE", "AUTHORIZE",
     "DENY", "INBOX", "CLEAR", "LOGOUT",
+}
+
+local COMMAND_ALIASES = {
+    AIUTO = "HELP",
+    OBIETTIVI = "TASKS",
+    AZIONI = "ACTIONS",
+    STATO = "STATUS",
+    AVVISI = "ALERTS",
+    LEGGI = "READ",
+    CERCA = "SEARCH",
+    ELENCA = "LIST",
+    LISTA = "LIST",
+    PERSONALE = "PERSONNEL",
+    CONFRONTA = "COMPARE",
+    ISPEZIONA = "INSPECT",
+    TRACCIA = "TRACE",
+    AUTORIZZA = "AUTHORIZE",
+    NEGA = "DENY",
+    POSTA = "INBOX",
+    MESSAGGI = "INBOX",
+    PULISCI = "CLEAR",
+    ESCI = "LOGOUT",
 }
 
 local RECORD_IDS = {}
@@ -32,6 +61,54 @@ table.sort(OVERRIDE_TOKENS)
 
 local SYSTEM_NAMES = {"WATER", "POWER", "AIR", "POPULATION", "EXTERNAL"}
 local LIST_CATEGORIES = {"INCIDENTS", "MAINTENANCE", "DIRECTIVES", "WITNESS", "ALL"}
+local SYSTEM_ALIASES = {
+    water = "water",
+    wtr = "water",
+    acqua = "water",
+    power = "power",
+    pwr = "power",
+    energia = "power",
+    potenza = "power",
+    air = "air",
+    aria = "air",
+    population = "population",
+    pop = "population",
+    popolazione = "population",
+    external = "external",
+    ext = "external",
+    surface = "external",
+    esterno = "external",
+    superficie = "external",
+}
+local LIST_CATEGORY_ALIASES = {
+    INCIDENTS = "INCIDENTS",
+    INCIDENTI = "INCIDENTS",
+    MAINTENANCE = "MAINTENANCE",
+    MANUTENZIONE = "MAINTENANCE",
+    DIRECTIVES = "DIRECTIVES",
+    DIRETTIVE = "DIRECTIVES",
+    WITNESS = "WITNESS",
+    TESTIMONIANZA = "WITNESS",
+    TESTIMONIANZE = "WITNESS",
+    ALL = "ALL",
+    TUTTO = "ALL",
+}
+local LOCK_REASON_KEYS = {
+    ["  Record sealed inside ANNEX occupancy branch. Rebuild and override required."] = "cmd_lock_annex_rebuild",
+    ["  Run the off-ledger ration model before this file exists."] = "cmd_lock_ration_model",
+    ["  BLACK VAULT locked. Deep override required."] = "cmd_lock_black_vault",
+    ["  Capture a live slate sync from A-17 before this file exists."] = "cmd_lock_slate_sync",
+    ["  DAWN branch locked. Surface continuity records remain suppressed."] = "cmd_lock_dawn_branch",
+    ["  Run the surface stability model before this file exists."] = "cmd_lock_surface_model",
+    ["  Decode the dawn cache before this slate becomes readable."] = "cmd_lock_dawn_cache",
+    ["Annex vault access required."] = "cmd_lock_annex_access",
+    ["Doctrine-level access required."] = "cmd_lock_doctrine_access",
+    ["Dawn branch access required."] = "cmd_lock_dawn_access",
+}
+local OVERRIDE_ERROR_KEYS = {
+    ["Unknown override token."] = "cmd_override_unknown",
+    ["This terminal rejects that token at the current depth."] = "cmd_override_depth_reject",
+}
 
 local function seg(text, color)
     return {text = text, color = color or colors.text}
@@ -55,6 +132,97 @@ end
 
 local function separator()
     return {seg("============================================================", colors.border)}
+end
+
+local function normalize_command_name(name)
+    name = (name or ""):upper()
+    return COMMAND_ALIASES[name] or name
+end
+
+local function normalize_system_name(name)
+    return SYSTEM_ALIASES[(name or ""):lower()]
+end
+
+local function normalize_list_category(name)
+    return LIST_CATEGORY_ALIASES[(name or ""):upper()]
+end
+
+local function localize_lock_reason(reason)
+    local key = LOCK_REASON_KEYS[reason or ""]
+    if key then
+        return L(key)
+    end
+    return reason or L("cmd_record_locked")
+end
+
+local function localize_override_error(message)
+    local key = OVERRIDE_ERROR_KEYS[message or ""]
+    if key then
+        return L(key)
+    end
+    return message or L("cmd_access_reject")
+end
+
+local function build_command_names()
+    local names = {}
+    local seen = {}
+
+    for _, cmd in ipairs(COMMAND_LIST) do
+        seen[cmd] = true
+        table.insert(names, cmd)
+    end
+
+    for alias in pairs(COMMAND_ALIASES) do
+        if not seen[alias] then
+            seen[alias] = true
+            table.insert(names, alias)
+        end
+    end
+
+    table.sort(names)
+    return names
+end
+
+local function build_system_completion_names()
+    local names = {}
+    local seen = {}
+
+    for _, name in ipairs(SYSTEM_NAMES) do
+        seen[name] = true
+        table.insert(names, name)
+    end
+
+    for alias in pairs(SYSTEM_ALIASES) do
+        local upper = alias:upper()
+        if not seen[upper] then
+            seen[upper] = true
+            table.insert(names, upper)
+        end
+    end
+
+    table.sort(names)
+    return names
+end
+
+local function build_list_category_completion_names()
+    local names = {}
+    local seen = {}
+
+    for _, category in ipairs(LIST_CATEGORIES) do
+        seen[category] = true
+        table.insert(names, category)
+    end
+
+    for alias in pairs(LIST_CATEGORY_ALIASES) do
+        local upper = alias:upper()
+        if not seen[upper] then
+            seen[upper] = true
+            table.insert(names, upper)
+        end
+    end
+
+    table.sort(names)
+    return names
 end
 
 local function format_record_header(id, record)
@@ -266,69 +434,69 @@ function handlers.ALERTS(game, _args)
     table.insert(out, blank())
 
     local alerts = {
-        {"INC-7301", "Unmetered water draw on retired branch A-17", "PRIORITY-2"},
+        {id = "INC-7301", desc = "alert_inc_7301", label = "alert_label_priority_2", severity = "warning"},
     }
     if game.records_read["INC-7290"] then
-        table.insert(alerts, {"INC-7290", "Pediatric antibiotic variance tied to retired nursery code", "PRIORITY-2"})
+        table.insert(alerts, {id = "INC-7290", desc = "alert_inc_7290", label = "alert_label_priority_2", severity = "warning"})
     end
     if game.records_read["INC-7288"] then
-        table.insert(alerts, {"INC-7288", "Population checksum mismatch in hidden LANTERN branch", "PRIORITY-3"})
+        table.insert(alerts, {id = "INC-7288", desc = "alert_inc_7288", label = "alert_label_priority_3", severity = "warning"})
     end
     if game.records_read["INC-7021"] then
-        table.insert(alerts, {"INC-7021", "Dormant air branch consuming live scrubber mass", "PRIORITY-2"})
+        table.insert(alerts, {id = "INC-7021", desc = "alert_inc_7021", label = "alert_label_priority_2", severity = "warning"})
     end
     if game.records_read["INC-7322"] then
-        table.insert(alerts, {"INC-7322", "External mast reporting clean interval before forced suppression", "PRIORITY-2"})
+        table.insert(alerts, {id = "INC-7322", desc = "alert_inc_7322", label = "alert_label_priority_2", severity = "warning"})
     end
     if game.flags["annex_vault_unlocked"] then
-        table.insert(alerts, {"DIR-8890", "Annex occupancy suppression order confirmed", "DIRECTIVE BREACH"})
+        table.insert(alerts, {id = "DIR-8890", desc = "alert_dir_8890", label = "alert_label_directive_breach", severity = "critical"})
     end
     if game.flags["dawn_vault_unlocked"] then
-        table.insert(alerts, {"DIR-8700", "Surface-fatality narrative confirmed as partial lie", "DIRECTIVE BREACH"})
+        table.insert(alerts, {id = "DIR-8700", desc = "alert_dir_8700", label = "alert_label_directive_breach", severity = "critical"})
     end
     if game.records_read["INC-7295"] then
-        table.insert(alerts, {"INC-7295", "Parasitic power draw on retired feeder RF-A17", "PRIORITY-2"})
+        table.insert(alerts, {id = "INC-7295", desc = "alert_inc_7295", label = "alert_label_priority_2", severity = "warning"})
     end
     if game.records_read["INC-7300"] then
-        table.insert(alerts, {"INC-7300", "Thermal variance in sealed corridor C-2 exceeds ambient range", "PRIORITY-2"})
+        table.insert(alerts, {id = "INC-7300", desc = "alert_inc_7300", label = "alert_label_priority_2", severity = "warning"})
     end
     if game.records_read["INC-6410"] then
-        table.insert(alerts, {"INC-6410", "Annex respiratory outbreak; medical response denied", "PRIORITY-1"})
+        table.insert(alerts, {id = "INC-6410", desc = "alert_inc_6410", label = "alert_label_priority_1", severity = "critical"})
     end
     if game.records_read["INC-5820"] then
-        table.insert(alerts, {"INC-5820", "Selection Protocol political compliance weighting exposed", "PRIORITY-3"})
+        table.insert(alerts, {id = "INC-5820", desc = "alert_inc_5820", label = "alert_label_priority_3", severity = "warning"})
     end
     if game.flags["construction_lead"] then
-        table.insert(alerts, {"WIT-099-A", "Construction-era concealed volumes confirmed pre-designed", "PRIORITY-2"})
+        table.insert(alerts, {id = "WIT-099-A", desc = "alert_wit_099_a", label = "alert_label_priority_2", severity = "warning"})
     end
     if game.records_read["DIR-9200"] then
-        table.insert(alerts, {"DIR-9200", "Cross-silo hidden populations confirmed in 4+ facilities", "DIRECTIVE BREACH"})
+        table.insert(alerts, {id = "DIR-9200", desc = "alert_dir_9200", label = "alert_label_directive_breach", severity = "critical"})
     end
     if game.records_read["INC-6120"] then
-        table.insert(alerts, {"INC-6120", "Pre-activation survey proves Directorate knew surface viable", "DIRECTIVE BREACH"})
+        table.insert(alerts, {id = "INC-6120", desc = "alert_inc_6120", label = "alert_label_directive_breach", severity = "critical"})
     end
     if game.flags["ash_contact"] then
-        table.insert(alerts, {"SEC", "Commander Ash has flagged this terminal for review", "PRIORITY-1"})
+        table.insert(alerts, {id = "SEC", desc = "alert_sec", label = "alert_label_priority_1", severity = "critical"})
     end
     if game.records_read["MLOG-ANN-0025"] then
-        table.insert(alerts, {"MLOG-ANN-0025", "A-17 detainee manifest accessed — identities exposed", "PRIORITY-1"})
+        table.insert(alerts, {id = "MLOG-ANN-0025", desc = "alert_mlog_ann_0025", label = "alert_label_priority_1", severity = "critical"})
     end
     if game.records_read["WIT-MIRA-001"] then
-        table.insert(alerts, {"WIT-MIRA-001", "Recovered slate from detainee A17-22", "PERSONAL"})
+        table.insert(alerts, {id = "WIT-MIRA-001", desc = "alert_wit_mira_001", label = "alert_label_personal", severity = "warning"})
     end
     if game.decisions_unlocked then
-        table.insert(alerts, {"FINAL", "A terminal decision is now available", "IMMEDIATE"})
+        table.insert(alerts, {id = "FINAL", desc = "alert_final", label = "alert_label_immediate", severity = "critical"})
     end
 
     for _, alert in ipairs(alerts) do
         local pri_color = colors.amber
-        if alert[3] == "IMMEDIATE" or alert[3] == "DIRECTIVE BREACH" then
+        if alert.severity == "critical" then
             pri_color = colors.red
         end
         table.insert(out, {
-            seg("  [" .. alert[3] .. "] ", pri_color),
-            seg(alert[1], colors.bright),
-            seg(": " .. alert[2], colors.text),
+            seg("  [" .. L(alert.label) .. "] ", pri_color),
+            seg(alert.id, colors.bright),
+            seg(": " .. L(alert.desc), colors.text),
         })
     end
 
@@ -339,16 +507,16 @@ end
 
 function handlers.READ(game, args)
     if not args or #args == 0 then
-        return {line("  ERROR: Usage: READ <record-id> or READ MSG <number>", colors.red)}
+        return {line(L("cmd_read_usage"), colors.red)}
     end
 
     if args[1]:upper() == "MSG" then
         if not args[2] then
-            return {line("  ERROR: Usage: READ MSG <number>", colors.red)}
+            return {line(L("cmd_read_msg_usage"), colors.red)}
         end
         local n = tonumber(args[2])
         if not n or n < 1 or n > #game.inbox then
-            return {line("  ERROR: Invalid message number. Use INBOX to inspect the list.", colors.red)}
+            return {line(L("cmd_invalid_msg"), colors.red)}
         end
 
         local entry = game.inbox[n]
@@ -393,7 +561,7 @@ function handlers.READ(game, args)
     local id = args[1]:upper()
     local record = data.records[id]
     if not record then
-        return {line("  ERROR: Record '" .. id .. "' not found. Use LIST or SEARCH.", colors.red)}
+        return {line(Lt("cmd_record_not_found_search", id), colors.red)}
     end
 
     if not game:canAccessRecord(id) then
@@ -401,7 +569,7 @@ function handlers.READ(game, args)
         table.insert(out, separator())
         table.insert(out, {seg(L("cmd_access_denied"), colors.red)})
         table.insert(out, blank())
-        table.insert(out, {seg(record.lock_reason or "  Record is locked behind a higher classification gate.", colors.amber)})
+        table.insert(out, {seg(localize_lock_reason(record.lock_reason), colors.amber)})
         table.insert(out, blank())
         table.insert(out, {seg(L("cmd_override_hint"), colors.dim)})
         table.insert(out, separator())
@@ -467,7 +635,7 @@ function handlers.SEARCH(game, args)
 end
 
 function handlers.LIST(game, args)
-    local category = (args and #args > 0) and args[1]:upper() or "ALL"
+    local category = (args and #args > 0) and normalize_list_category(args[1]) or "ALL"
     local type_filter = nil
 
     if category == "INCIDENTS" then type_filter = "incident"
@@ -476,8 +644,8 @@ function handlers.LIST(game, args)
     elseif category == "WITNESS" then type_filter = "witness"
     elseif category ~= "ALL" then
         return {
-            line("  ERROR: Unknown category '" .. category .. "'.", colors.red),
-            line("  Available: incidents, maintenance, directives, witness, all", colors.dim),
+            line(Lt("cmd_list_category_unknown", args[1] or ""), colors.red),
+            line(L("cmd_list_categories_available"), colors.dim),
         }
     end
 
@@ -519,14 +687,14 @@ function handlers.LIST(game, args)
     end
 
     table.insert(out, blank())
-    table.insert(out, dim_line("  * = unread  |  Use READ <id> to view a record"))
+    table.insert(out, dim_line(L("cmd_list_footer")))
     table.insert(out, separator())
     return out
 end
 
 function handlers.PERSONNEL(game, args)
     if not args or #args == 0 then
-        return {line("  ERROR: Usage: PERSONNEL <id> (for example PERSONNEL CIV-0119)", colors.red)}
+        return {line(L("cmd_personnel_usage"), colors.red)}
     end
 
     local id = args[1]:upper()
@@ -534,7 +702,7 @@ function handlers.PERSONNEL(game, args)
     if not person then
         local results = data.searchPersonnel(table.concat(args, " "))
         if #results == 0 then
-            return {line("  ERROR: Personnel '" .. id .. "' not found.", colors.red)}
+            return {line(Lt("cmd_personnel_not_found", id), colors.red)}
         elseif #results == 1 then
             id = results[1].id
             person = results[1].person
@@ -574,7 +742,7 @@ end
 
 function handlers.COMPARE(game, args)
     if not args or #args < 2 then
-        return {line("  ERROR: Usage: COMPARE <id1> <id2>", colors.red)}
+        return {line(L("cmd_compare_usage"), colors.red)}
     end
 
     local id1 = args[1]:upper()
@@ -582,10 +750,10 @@ function handlers.COMPARE(game, args)
     local r1 = data.records[id1]
     local r2 = data.records[id2]
 
-    if not r1 then return {line("  ERROR: Record '" .. id1 .. "' not found.", colors.red)} end
-    if not r2 then return {line("  ERROR: Record '" .. id2 .. "' not found.", colors.red)} end
-    if not game:canAccessRecord(id1) then return {line("  ERROR: Access denied to " .. id1, colors.red)} end
-    if not game:canAccessRecord(id2) then return {line("  ERROR: Access denied to " .. id2, colors.red)} end
+    if not r1 then return {line(Lt("cmd_record_not_found_simple", id1), colors.red)} end
+    if not r2 then return {line(Lt("cmd_record_not_found_simple", id2), colors.red)} end
+    if not game:canAccessRecord(id1) then return {line(Lt("cmd_access_denied_to", id1), colors.red)} end
+    if not game:canAccessRecord(id2) then return {line(Lt("cmd_access_denied_to", id2), colors.red)} end
 
     local out = {}
     table.insert(out, separator())
@@ -632,13 +800,42 @@ function handlers.COMPARE(game, args)
     return out
 end
 
-function handlers.INSPECT(_game, args)
+function handlers.INSPECT(game, args)
     if not args or #args == 0 then
         return {line(L("cmd_inspect_hint"), colors.red)}
     end
 
-    local key = args[1]:lower()
-    local sys = data.systems[key]
+    local id = args[1]:upper()
+    local record = data.records[id]
+    if record then
+        if not game:canAccessRecord(id) then
+            return {line(Lt("cmd_access_denied_to", id), colors.red)}
+        end
+
+        local out = {}
+        table.insert(out, separator())
+        table.insert(out, header_line(L("cmd_inspect_hdr")))
+        table.insert(out, separator())
+        table.insert(out, {seg("  " .. id, colors.bright)})
+        table.insert(out, {seg("  " .. record.title, colors.header)})
+        table.insert(out, separator())
+        table.insert(out, {seg(L("cmd_type_label"), colors.dim), seg(record.type:upper(), colors.text)})
+        table.insert(out, {seg(L("cmd_classification"), colors.dim), seg(record.classification, record.classification:find("BLACK VAULT") and colors.classified or colors.text)})
+        table.insert(out, {seg(L("cmd_date"), colors.dim), seg(record.date, colors.text)})
+        table.insert(out, {seg(L("cmd_filed_by"), colors.dim), seg(record.filed_by, colors.text)})
+        table.insert(out, {seg(L("cmd_sector"), colors.dim), seg(record.sector, colors.text)})
+        if record.related and #record.related > 0 then
+            table.insert(out, {seg(L("cmd_xrefs"), colors.dim), seg(table.concat(record.related, ", "), colors.cyan)})
+        end
+        if record.keywords and #record.keywords > 0 then
+            table.insert(out, {seg(L("cmd_keywords_label"), colors.dim), seg(table.concat(record.keywords, ", "), colors.dim)})
+        end
+        table.insert(out, separator())
+        return out
+    end
+
+    local key = normalize_system_name(args[1])
+    local sys = key and data.systems[key] or nil
     if not sys then
         return {line(L("cmd_trace_unknown"), colors.red)}
     end
@@ -673,12 +870,12 @@ function handlers.TRACE(game, args)
         return {line(L("cmd_trace_hint"), colors.red)}
     end
 
-    local resource = args[1]:lower()
+    local resource = normalize_system_name(args[1])
     local out = {}
 
-    if resource == "water" or resource == "wtr" then
+    if resource == "water" then
         table.insert(out, separator())
-        table.insert(out, header_line(L("cmd_trace_hdr") .. "WATER"))
+        table.insert(out, header_line(L("cmd_trace_hdr") .. L("trace_label_water")))
         table.insert(out, separator())
         table.insert(out, blank())
         table.insert(out, {seg(L("trace_water_source"), colors.text)})
@@ -691,9 +888,9 @@ function handlers.TRACE(game, args)
         table.insert(out, {seg(L("trace_water_curve"), colors.amber)})
         table.insert(out, blank())
         game:onSearchPerformed("trace water")
-    elseif resource == "power" or resource == "pwr" then
+    elseif resource == "power" then
         table.insert(out, separator())
-        table.insert(out, header_line(L("cmd_trace_hdr") .. "POWER"))
+        table.insert(out, header_line(L("cmd_trace_hdr") .. L("trace_label_power")))
         table.insert(out, separator())
         table.insert(out, blank())
         table.insert(out, {seg(L("trace_power_source"), colors.text)})
@@ -703,7 +900,7 @@ function handlers.TRACE(game, args)
         game:onSearchPerformed("trace power")
     elseif resource == "air" then
         table.insert(out, separator())
-        table.insert(out, header_line(L("cmd_trace_hdr") .. "AIR"))
+        table.insert(out, header_line(L("cmd_trace_hdr") .. L("trace_label_air")))
         table.insert(out, separator())
         table.insert(out, blank())
         table.insert(out, {seg(L("trace_air_main"), colors.text)})
@@ -711,9 +908,9 @@ function handlers.TRACE(game, args)
         table.insert(out, {seg(L("trace_air_residue"), colors.text)})
         table.insert(out, blank())
         game:onSearchPerformed("trace air")
-    elseif resource == "population" or resource == "pop" then
+    elseif resource == "population" then
         table.insert(out, separator())
-        table.insert(out, header_line(L("cmd_trace_hdr") .. "POPULATION"))
+        table.insert(out, header_line(L("cmd_trace_hdr") .. L("trace_label_population")))
         table.insert(out, separator())
         table.insert(out, blank())
         table.insert(out, {seg(L("trace_pop_public"), colors.text)})
@@ -721,9 +918,9 @@ function handlers.TRACE(game, args)
         table.insert(out, {seg(L("trace_pop_tag"), colors.amber)})
         table.insert(out, blank())
         game:onSearchPerformed("trace population")
-    elseif resource == "external" or resource == "ext" or resource == "surface" then
+    elseif resource == "external" then
         table.insert(out, separator())
-        table.insert(out, header_line(L("cmd_trace_hdr") .. "EXTERNAL"))
+        table.insert(out, header_line(L("cmd_trace_hdr") .. L("trace_label_external")))
         table.insert(out, separator())
         table.insert(out, blank())
         table.insert(out, {seg(L("trace_ext_mast"), colors.text)})
@@ -756,7 +953,7 @@ function handlers.OVERRIDE(game, args)
 
     if not result.ok then
         table.insert(out, {seg(L("cmd_access_reject"), colors.red)})
-        table.insert(out, {seg("  " .. result.message, colors.amber)})
+        table.insert(out, {seg("  " .. localize_override_error(result.message), colors.amber)})
         table.insert(out, blank())
         table.insert(out, separator())
         return out
@@ -818,7 +1015,7 @@ function handlers.INBOX(game, _args)
     end
 
     table.insert(out, blank())
-    table.insert(out, dim_line("  * = unread  |  Use READ MSG <number> to open a message"))
+    table.insert(out, dim_line(L("cmd_inbox_footer")))
     table.insert(out, separator())
     return out
 end
@@ -1181,7 +1378,7 @@ function commands.getCompletions(input, game)
 
     if #parts == 1 and not input:find("%s$") then
         local matches = {}
-        for _, cmd in ipairs(COMMAND_LIST) do
+        for _, cmd in ipairs(build_command_names()) do
             if cmd:sub(1, #parts[1]) == parts[1] and cmd ~= parts[1] then
                 table.insert(matches, cmd)
             end
@@ -1189,7 +1386,7 @@ function commands.getCompletions(input, game)
         return matches
     end
 
-    local cmd = parts[1]
+    local cmd = normalize_command_name(parts[1])
 
     if cmd == "READ" and #parts == 2 and not input:find("%s$") then
         local matches = {}
@@ -1233,7 +1430,12 @@ function commands.getCompletions(input, game)
     if cmd == "INSPECT" and (#parts == 1 or (#parts == 2 and not input:find("%s$"))) then
         local matches = {}
         local partial = #parts >= 2 and parts[2] or ""
-        for _, name in ipairs(SYSTEM_NAMES) do
+        for _, id in ipairs(RECORD_IDS) do
+            if #partial == 0 or id:sub(1, #partial) == partial then
+                table.insert(matches, id)
+            end
+        end
+        for _, name in ipairs(build_system_completion_names()) do
             if #partial == 0 or name:sub(1, #partial) == partial then
                 table.insert(matches, name)
             end
@@ -1244,7 +1446,7 @@ function commands.getCompletions(input, game)
     if cmd == "TRACE" and (#parts == 1 or (#parts == 2 and not input:find("%s$"))) then
         local matches = {}
         local partial = #parts >= 2 and parts[2] or ""
-        for _, name in ipairs(SYSTEM_NAMES) do
+        for _, name in ipairs(build_system_completion_names()) do
             if #partial == 0 or name:sub(1, #partial) == partial then
                 table.insert(matches, name)
             end
@@ -1255,7 +1457,7 @@ function commands.getCompletions(input, game)
     if cmd == "LIST" and (#parts == 1 or (#parts == 2 and not input:find("%s$"))) then
         local matches = {}
         local partial = #parts >= 2 and parts[2] or ""
-        for _, category in ipairs(LIST_CATEGORIES) do
+        for _, category in ipairs(build_list_category_completion_names()) do
             if #partial == 0 or category:sub(1, #partial) == partial then
                 table.insert(matches, category)
             end
@@ -1336,7 +1538,7 @@ function commands.execute(game, input_text)
         table.insert(parts, word)
     end
 
-    local cmd = parts[1]:upper()
+    local cmd = normalize_command_name(parts[1]:upper())
     local args = {}
     for i = 2, #parts do
         table.insert(args, parts[i])

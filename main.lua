@@ -644,18 +644,18 @@ function love.update(dt)
                 terminal:addSegments({{text = box_border, color = colors.cyan}}, true)
                 terminal:addSegments(boxLineSegments({
                     {text = "  |  ", color = colors.cyan},
-                    {text = "NEW MESSAGE", color = colors.bright},
-                    {text = " from ", color = colors.dim},
+                    {text = locale.t("notification_new_message"), color = colors.bright},
+                    {text = locale.t("notification_from"), color = colors.dim},
                     {text = newest.message.from, color = newest.message.from == "UNKNOWN TERMINAL" and colors.amber or colors.text},
                 }, BOX_W, colors.cyan), true)
                 terminal:addSegments(boxLineSegments({
                     {text = "  |  ", color = colors.cyan},
-                    {text = "Subject: ", color = colors.dim},
+                    {text = locale.t("notification_subject"), color = colors.dim},
                     {text = newest.message.subject, color = colors.text},
                 }, BOX_W, colors.cyan), true)
                 terminal:addSegments(boxLineSegments({
                     {text = "  |  ", color = colors.cyan},
-                    {text = "Type INBOX to view. READ MSG " .. #game.inbox .. " to read.", color = colors.dim},
+                    {text = string.format(locale.t("notification_read"), #game.inbox), color = colors.dim},
                 }, BOX_W, colors.cyan), true)
                 terminal:addSegments({{text = box_border, color = colors.cyan}}, true)
                 terminal:addBlank(true)
