@@ -153,6 +153,21 @@ local function updateInput()
     end
 end
 
+local function applyInputCompletion()
+    if not game then return false end
+
+    local completed = commands.applyCompletion(input_text, game)
+    if completed == input_text then
+        return false
+    end
+
+    input_text = completed
+    input_cursor = utf8_len(input_text)
+    updateInput()
+    sound:click()
+    return true
+end
+
 local function buildEffectChain(width, height)
     local chain = moonshine(width, height, moonshine.effects.scanlines)
         .chain(moonshine.effects.crt)
@@ -844,6 +859,11 @@ function love.keypressed(key, scancode, isrepeat)
     elseif key == "left" then
         input_cursor = math.max(0, input_cursor - 1)
         updateInput()
+    elseif key == "right" and not isrepeat then
+        if not applyInputCompletion() then
+            input_cursor = math.min(utf8_len(input_text), input_cursor + 1)
+            updateInput()
+        end
     elseif key == "right" then
         input_cursor = math.min(utf8_len(input_text), input_cursor + 1)
         updateInput()
@@ -854,13 +874,7 @@ function love.keypressed(key, scancode, isrepeat)
         input_cursor = utf8_len(input_text)
         updateInput()
     elseif key == "tab" and not isrepeat then
-        local completed = commands.applyCompletion(input_text, game)
-        if completed ~= input_text then
-            input_text = completed
-            input_cursor = utf8_len(input_text)
-            updateInput()
-            sound:click()
-        end
+        applyInputCompletion()
     elseif key == "up" then
         if #command_history > 0 then
             history_index = math.max(1, history_index - 1)
