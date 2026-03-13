@@ -65,7 +65,8 @@ function boot.getSequence()
         {delay = 0.05, segments = boxed_line({
             {text = "    ", color = colors.border},
             {text = "A S H L I N E", color = colors.bright},
-            {text = fit_text(L("boot_os_name"), INNER_WIDTH - 4 - utf8_utils.len("A S H L I N E")), color = colors.border},
+            {text = "   ", color = colors.border},
+            {text = fit_text(L("boot_os_name"), INNER_WIDTH - 7 - utf8_utils.len("A S H L I N E")), color = colors.border},
         })},
         {delay = 0.05, segments = boxed_line({
             {text = "    ", color = colors.border},

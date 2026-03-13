@@ -1,6 +1,7 @@
 local colors = require("colors")
 local data = require("data")
 local locale = require("locale")
+local utf8_utils = require("utf8_utils")
 
 local commands = {}
 
@@ -132,6 +133,15 @@ end
 
 local function separator()
     return {seg("============================================================", colors.border)}
+end
+
+local function pad_text(text, width)
+    local value = text or ""
+    local len = utf8_utils.len(value)
+    if len >= width then
+        return value
+    end
+    return value .. string.rep(" ", width - len)
 end
 
 local function normalize_command_name(name)
@@ -424,6 +434,12 @@ function handlers.STATUS(game, _args)
     table.insert(out, blank())
 
     local systems = {"water", "power", "air", "population", "external"}
+    local system_name_width = 0
+    for _, key in ipairs(systems) do
+        local name = data.systems[key] and data.systems[key].name or ""
+        system_name_width = math.max(system_name_width, utf8_utils.len(name))
+    end
+    system_name_width = system_name_width + 1
     for _, key in ipairs(systems) do
         local sys = data.systems[key]
         local status_color = colors.bright
@@ -431,7 +447,7 @@ function handlers.STATUS(game, _args)
         if sys.status == "CRITICAL" then status_color = colors.red end
         table.insert(out, {
             seg("  > ", colors.dim),
-            seg(string.format("%-34s", sys.name), colors.text),
+            seg(pad_text(sys.name, system_name_width), colors.text),
             seg("[", colors.dim),
             seg(localize_system_status(sys.status), status_color),
             seg("]", colors.dim),
