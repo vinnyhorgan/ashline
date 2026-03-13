@@ -125,7 +125,7 @@ local function autosaveGame()
 
     local ok, err = Save.save(nil, buildSavePayload())
     if not ok then
-        setSaveNotice("SAVE FAILED: " .. tostring(err), 5.0)
+        setSaveNotice(string.format(locale.t("save_failed"), tostring(err)), 5.0)
         return false
     end
     return true
@@ -138,7 +138,7 @@ local function restoreTerminalForSession(message)
     terminal:addBlank(true)
     terminal:addSegments({{text = "  +===================================================+", color = colors.cyan}}, true)
     terminal:addSegments({{text = "  |  " .. message, color = colors.bright}}, true)
-    terminal:addSegments({{text = "  |  Type TASKS to reorient. INBOX shows pending threads.", color = colors.dim}}, true)
+    terminal:addSegments({{text = "  |  " .. locale.t("session_restore_hint"), color = colors.dim}}, true)
     terminal:addSegments({{text = "  +===================================================+", color = colors.cyan}}, true)
     terminal:addBlank(true)
 end
@@ -279,33 +279,33 @@ end
 local function updateStatus()
     if not terminal or not game then return end
 
-    local phase_text = "MONITORING"
+    local phase_text = locale.t("phase_monitoring")
     local phase_color = colors.bright
     if game.phase == "boot" then
-        phase_text = "INITIALIZING"
+        phase_text = locale.t("phase_initializing")
         phase_color = colors.amber
     elseif game.ending then
-        phase_text = "SESSION ENDING"
+        phase_text = locale.t("phase_session_ending")
         phase_color = colors.red
     elseif game.chapter == 1 then
-        phase_text = "ANOMALY TRIAGE"
+        phase_text = locale.t("phase_anomaly_triage")
         phase_color = colors.bright
     elseif game.chapter == 2 then
-        phase_text = "HIDDEN OCCUPANCY"
+        phase_text = locale.t("phase_hidden_occupancy")
         phase_color = colors.cyan
     elseif game.chapter == 3 then
-        phase_text = "SUPPRESSION LEDGER"
+        phase_text = locale.t("phase_suppression_ledger")
         phase_color = colors.amber
     elseif game.chapter == 4 then
-        phase_text = "BURIED SKY"
+        phase_text = locale.t("phase_buried_sky")
         phase_color = colors.amber
     elseif game.chapter == 5 then
-        phase_text = "TERMINAL DECISION"
+        phase_text = locale.t("phase_terminal_decision")
         phase_color = colors.red
     end
 
     terminal:setStatus({
-        {text = " PHASE:", color = colors.dim},
+        {text = locale.t("status_phase_label"), color = colors.dim},
         {text = phase_text, color = phase_color},
         {text = "  |  ", color = colors.border},
         {text = "PROOF:", color = colors.dim},
@@ -348,7 +348,7 @@ end
 local function continueSession()
     local payload, source = Save.load()
     if not payload or not payload.game then
-        setSaveNotice("No valid save could be restored.", 5.0)
+        setSaveNotice(locale.t("save_restore_failed"), 5.0)
         return
     end
 
@@ -378,11 +378,11 @@ local function continueSession()
     app_state = "game"
 
     terminal:showInput(game.phase == "main")
-    restoreTerminalForSession(source == "backup" and "SESSION RESTORED FROM BACKUP SAVE" or "SESSION RESTORED")
+    restoreTerminalForSession(source == "backup" and locale.t("session_restored_backup_terminal") or locale.t("session_restored_terminal"))
     updateHeader()
     updateStatus()
     updateInput()
-    setSaveNotice(source == "backup" and "Primary save was damaged. Backup restored." or "Session restored.", 4.0)
+    setSaveNotice(source == "backup" and locale.t("session_restored_backup_notice") or locale.t("session_restored_notice"), 4.0)
 end
 
 local function returnToTitle()
@@ -455,7 +455,7 @@ local function executeCommand()
         returnToTitle()
     elseif result == "LOGOUT" then
         terminal:addBlank()
-        terminal:addSegments({{text = "  Session terminated. Goodbye, Operator.", color = colors.dim}}, true)
+        terminal:addSegments({{text = locale.t("logout_goodbye"), color = colors.dim}}, true)
         terminal:addBlank(true)
         terminal:showInput(false)
         game.phase = "ending"
@@ -699,15 +699,15 @@ function love.update(dt)
                 terminal:addSegments({{text = "  ======================================================", color = colors.border}})
                 terminal:addBlank()
                 terminal:addSegments({{text = "  ASHLINE", color = colors.bright}})
-                terminal:addSegments({{text = "  An archive of pressure, omission, and choice", color = colors.dim}})
+                terminal:addSegments({{text = locale.t("ending_tagline"), color = colors.dim}})
                 terminal:addBlank()
-                terminal:addSegments({{text = '  Ending: "' .. ending_data.title .. '"', color = colors.amber}})
-                terminal:addSegments({{text = "  Proof gathered: " .. math.floor(game.proof_score), color = colors.text}})
-                terminal:addSegments({{text = "  Audit risk: " .. tostring(game.audit_risk) .. "  |  Silo strain: " .. tostring(game.strain), color = colors.text}})
-                terminal:addSegments({{text = "  Records examined: " .. countTable(game.records_read), color = colors.text}})
-                terminal:addSegments({{text = "  Personnel reviewed: " .. countTable(game.personnel_viewed), color = colors.text}})
+                terminal:addSegments({{text = string.format(locale.t("ending_label"), ending_data.title), color = colors.amber}})
+                terminal:addSegments({{text = string.format(locale.t("ending_proof"), math.floor(game.proof_score)), color = colors.text}})
+                terminal:addSegments({{text = string.format(locale.t("ending_risk_strain"), game.audit_risk, game.strain), color = colors.text}})
+                terminal:addSegments({{text = string.format(locale.t("ending_records"), countTable(game.records_read)), color = colors.text}})
+                terminal:addSegments({{text = string.format(locale.t("ending_personnel"), countTable(game.personnel_viewed)), color = colors.text}})
                 terminal:addBlank()
-                terminal:addSegments({{text = "  Press Escape for the pause menu when you are done reading.", color = colors.dim}})
+                terminal:addSegments({{text = locale.t("ending_pause_hint"), color = colors.dim}})
                 terminal:addBlank()
                 terminal:addSegments({{text = "  ======================================================", color = colors.border}})
 

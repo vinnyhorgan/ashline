@@ -42,6 +42,15 @@ local function localizeMenuLabel(label)
     return label
 end
 
+local function get_text_speed_label(value)
+    if value == 60 then return locale.t("text_speed_deliberate") end
+    if value == 120 then return locale.t("text_speed_measured") end
+    if value == 180 then return locale.t("text_speed_standard") end
+    if value == 300 then return locale.t("text_speed_fast") end
+    if value == 600 then return locale.t("text_speed_instant") end
+    return tostring(value)
+end
+
 local function clamp(value, min_value, max_value)
     return math.max(min_value, math.min(max_value, value))
 end
@@ -259,7 +268,9 @@ function MenuUI:buildTitleLayout(w, h)
     local access_y = tagline_y + self.font:getHeight() + math.floor(unit * 0.9)
     local separator_y = access_y + self.font:getHeight() + math.floor(unit * 1.2)
 
-    local menu_w = math.max(340, self:measureMaxWidth(title_options, self.font) + unit * 14)
+    local menu_w = math.max(340, self:measureMaxWidth(title_options, self.font, function(option)
+        return localizeMenuLabel(option)
+    end) + unit * 14)
     local menu_y = separator_y + math.floor(unit * 2.4)
     local menu = self:buildListLayout(left, menu_y, menu_w, #title_options, self.font, {
         inner_pad_x = math.floor(unit * 1.4),
@@ -340,7 +351,16 @@ function MenuUI:buildSettingsLayout(w, h)
     local widest_label = self:measureMaxWidth(SETTINGS_OPTIONS, self.font, function(option)
         return locale.t(option.key or "setting_return") or option.label
     end)
-    local widest_value = self:measureMaxWidth({"DELIBERATE", "MEASURED", "STANDARD", "INSTANT", "ITALIANO", "[==========] 100%"}, self.font)
+    local widest_value = self:measureMaxWidth({
+        get_text_speed_label(60),
+        get_text_speed_label(120),
+        get_text_speed_label(180),
+        get_text_speed_label(300),
+        get_text_speed_label(600),
+        locale.getLanguageDisplayValue("en"),
+        locale.getLanguageDisplayValue("it"),
+        "[==========] 100%",
+    }, self.font)
     local desired_w = widest_label + widest_value + unit * 22
     local box_w = clamp(desired_w, math.floor(w * 0.58), w - (t.frame_inset + unit * 2) * 2)
     local panel_x = math.floor((w - box_w) / 2)
@@ -378,8 +398,10 @@ function MenuUI:buildPauseLayout(w, h)
     local hint_segs = self:getPauseHelpSegments()
     local inner_pad = math.floor(unit * 1.9)
     local content_min = math.max(
-        self:measureMaxWidth(PAUSE_OPTIONS, self.font) + unit * 10,
-        self.font:getWidth("Session suspended.") + unit * 4,
+        self:measureMaxWidth(PAUSE_OPTIONS, self.font, function(option)
+            return localizeMenuLabel(option)
+        end) + unit * 10,
+        self.font:getWidth(locale.t("pause_subtitle")) + unit * 4,
         measureSegmentsWidth(self.font, hint_segs) + unit * 4
     )
     local box_w = clamp(content_min + inner_pad * 2, math.floor(w * 0.30), math.floor(w * 0.50))
@@ -413,46 +435,46 @@ end
 
 function MenuUI:getTitleHelpSegments()
     return {
-        {text = "Up/Down", color = self.colors.text},
-        {text = " move", color = self.colors.dim},
+        {text = locale.t("ui_help_up_down"), color = self.colors.text},
+        {text = locale.t("ui_help_move"), color = self.colors.dim},
         {text = "  |  ", color = self.colors.border},
-        {text = "Enter", color = self.colors.text},
-        {text = " select", color = self.colors.dim},
+        {text = locale.t("ui_help_enter"), color = self.colors.text},
+        {text = locale.t("ui_help_select"), color = self.colors.dim},
         {text = "  |  ", color = self.colors.border},
-        {text = "Mouse", color = self.colors.text},
-        {text = " choose", color = self.colors.dim},
+        {text = locale.t("ui_help_mouse"), color = self.colors.text},
+        {text = locale.t("ui_help_choose"), color = self.colors.dim},
         {text = "  |  ", color = self.colors.border},
-        {text = "Esc", color = self.colors.text},
-        {text = " back", color = self.colors.dim},
+        {text = locale.t("ui_help_esc"), color = self.colors.text},
+        {text = locale.t("ui_help_back"), color = self.colors.dim},
     }
 end
 
 function MenuUI:getSettingsHelpSegments()
     return {
-        {text = "Left/Right", color = self.colors.text},
-        {text = " adjust", color = self.colors.dim},
+        {text = locale.t("ui_help_left_right"), color = self.colors.text},
+        {text = locale.t("ui_help_adjust"), color = self.colors.dim},
         {text = "  |  ", color = self.colors.border},
-        {text = "Enter", color = self.colors.text},
-        {text = " toggle/select", color = self.colors.dim},
+        {text = locale.t("ui_help_enter"), color = self.colors.text},
+        {text = locale.t("ui_help_toggle_select"), color = self.colors.dim},
         {text = "  |  ", color = self.colors.border},
-        {text = "Wheel", color = self.colors.text},
-        {text = " adjust", color = self.colors.dim},
+        {text = locale.t("ui_help_wheel"), color = self.colors.text},
+        {text = locale.t("ui_help_adjust"), color = self.colors.dim},
         {text = "  |  ", color = self.colors.border},
-        {text = "Esc", color = self.colors.text},
-        {text = " back", color = self.colors.dim},
+        {text = locale.t("ui_help_esc"), color = self.colors.text},
+        {text = locale.t("ui_help_back"), color = self.colors.dim},
     }
 end
 
 function MenuUI:getPauseHelpSegments()
     return {
-        {text = "Esc", color = self.colors.text},
-        {text = " resume", color = self.colors.dim},
+        {text = locale.t("ui_help_esc"), color = self.colors.text},
+        {text = locale.t("ui_help_resume"), color = self.colors.dim},
         {text = "  |  ", color = self.colors.border},
-        {text = "Up/Down", color = self.colors.text},
-        {text = " move", color = self.colors.dim},
+        {text = locale.t("ui_help_up_down"), color = self.colors.text},
+        {text = locale.t("ui_help_move"), color = self.colors.dim},
         {text = "  |  ", color = self.colors.border},
-        {text = "Enter", color = self.colors.text},
-        {text = " select", color = self.colors.dim},
+        {text = locale.t("ui_help_enter"), color = self.colors.text},
+        {text = locale.t("ui_help_select"), color = self.colors.dim},
     }
 end
 
@@ -665,12 +687,7 @@ function MenuUI:formatSettingValue(option)
     elseif option.kind == "enum" then
         local value = settings[option.key]
         if option.display then return option.display(value) end
-        if value == 60 then return "DELIBERATE" end
-        if value == 120 then return "MEASURED" end
-        if value == 180 then return "STANDARD" end
-        if value == 300 then return "FAST" end
-        if value == 600 then return "INSTANT" end
-        return tostring(value)
+        return get_text_speed_label(value)
     end
     return ""
 end
@@ -1139,7 +1156,7 @@ function MenuUI:drawTitleScreen(w, h)
     love.graphics.setColor(self.colors.amber)
     love.graphics.print(selected_meta.code, inner_x, route_y)
     love.graphics.setColor(self.colors.cyan)
-    love.graphics.print(locale.t("dossier_target") .. ": " .. selected_option, inner_x + self.font:getWidth(selected_meta.code) + unit * 2, route_y)
+    love.graphics.print(locale.t("dossier_target") .. ": " .. localizeMenuLabel(selected_option), inner_x + self.font:getWidth(selected_meta.code) + unit * 2, route_y)
 
     love.graphics.setFont(self.font_large)
     love.graphics.setColor(self.colors.bright)

@@ -4,6 +4,7 @@ local locale = require("locale")
 local Game = require("game")
 local commands = require("commands")
 local Save = require("save")
+local boot = require("boot")
 local data_it = require("data_it")
 local utf8_utils = require("utf8_utils")
 local RUNTIME_SLOT = "__ashline_test_" .. ((jit and "luajit") or ((_VERSION or "lua"):gsub("%W+", "_"):lower()))
@@ -291,6 +292,21 @@ local function verify_italian_release_surface()
     local inspect_output = exec(game, "ISPEZIONA INC-7301")
     local inspect_text = flatten_output(inspect_output)
     assert_true(inspect_text:find("METADATI DOCUMENTO", 1, true) ~= nil, "italian inspect should show record metadata")
+
+    local personnel_output = exec(game, "PERSONNEL VOSS")
+    local personnel_text = flatten_output(personnel_output)
+    assert_true(personnel_text:find("Trovate corrispondenze multiple", 1, true) ~= nil, "italian personnel search should localize multi-match heading")
+
+    local boot_sequence = boot.getSequence()
+    local boot_text = {}
+    for _, entry in ipairs(boot_sequence) do
+        for _, segment in ipairs(entry.segments or {}) do
+            boot_text[#boot_text + 1] = segment.text or ""
+        end
+    end
+    local boot_joined = table.concat(boot_text, "\n")
+    assert_true(boot_joined:find("BIOS INTEGRATO", 1, true) ~= nil, "italian boot should localize BIOS line")
+    assert_true(boot_joined:find("Sistema Operativo Terminale", 1, true) ~= nil, "italian boot should localize OS banner")
 
     locale.setLanguage("en")
     data.applyLanguage("en")

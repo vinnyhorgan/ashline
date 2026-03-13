@@ -709,7 +709,7 @@ function handlers.PERSONNEL(game, args)
             person = results[1].person
         else
             local out = {}
-            table.insert(out, line("  Multiple matches found:", colors.amber))
+            table.insert(out, line(L("cmd_multiple_personnel_matches"), colors.amber))
             for _, result in ipairs(results) do
                 table.insert(out, {
                     seg("  " .. string.format("%-12s", result.id), colors.bright),
