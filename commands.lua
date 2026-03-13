@@ -163,6 +163,31 @@ local function localize_override_error(message)
     return message or L("cmd_access_reject")
 end
 
+local function localize_system_status(status)
+    if status == "NOMINAL" then return L("status_nominal") end
+    if status == "CAUTION" then return L("status_caution") end
+    if status == "CRITICAL" then return L("status_critical") end
+    return status or ""
+end
+
+local function localize_personnel_status(status)
+    if status == "ACTIVE" then return L("personnel_status_active") end
+    if status == "DECEASED" then return L("personnel_status_deceased") end
+    if status == "REASSIGNED" then return L("personnel_status_reassigned") end
+    if status == "DETAINED" then return L("personnel_status_detained") end
+    return status or ""
+end
+
+local function localize_priority(priority)
+    if priority == "PRIORITY-1" then return L("alert_label_priority_1") end
+    if priority == "PRIORITY-2" then return L("alert_label_priority_2") end
+    if priority == "PRIORITY-3" then return L("alert_label_priority_3") end
+    if priority == "STANDARD" then return L("priority_standard") end
+    if priority == "URGENT" then return L("priority_urgent") end
+    if priority == "UNMARKED" then return L("priority_unmarked") end
+    return priority or ""
+end
+
 local function build_command_names()
     local names = {}
     local seen = {}
@@ -377,7 +402,7 @@ function handlers.ACTIONS(game, _args)
             local action = entry.action
             table.insert(out, {
                 seg("  " .. entry.id, colors.bright),
-                seg(action.ending and "  [FINAL]" or "  [OPERATIONAL]", action.ending and colors.red or colors.cyan),
+                seg("  " .. (action.ending and L("action_badge_final") or L("action_badge_operational")), action.ending and colors.red or colors.cyan),
             })
             table.insert(out, {seg("     " .. action.title, colors.header)})
             table.insert(out, {seg("     " .. action.description, colors.dim)})
@@ -408,7 +433,7 @@ function handlers.STATUS(game, _args)
             seg("  > ", colors.dim),
             seg(string.format("%-34s", sys.name), colors.text),
             seg("[", colors.dim),
-            seg(sys.status, status_color),
+            seg(localize_system_status(sys.status), status_color),
             seg("]", colors.dim),
         })
     end
@@ -536,7 +561,7 @@ function handlers.READ(game, args)
         table.insert(out, {seg(L("cmd_message_label"), colors.dim), seg(entry.id, colors.bright)})
         table.insert(out, {seg(L("cmd_from"), colors.dim), seg(msg.from, msg.from == "UNKNOWN TERMINAL" and colors.amber or colors.text)})
         table.insert(out, {seg(L("cmd_subject"), colors.dim), seg(msg.subject, colors.header)})
-        table.insert(out, {seg(L("cmd_priority"), colors.dim), seg(" " .. msg.priority, (msg.priority == "PRIORITY-1" or msg.priority == "URGENT") and colors.red or colors.text)})
+        table.insert(out, {seg(L("cmd_priority"), colors.dim), seg(" " .. localize_priority(msg.priority), (msg.priority == "PRIORITY-1" or msg.priority == "URGENT") and colors.red or colors.text)})
         table.insert(out, separator())
         table.insert(out, blank())
 
@@ -728,7 +753,7 @@ function handlers.PERSONNEL(game, args)
     table.insert(out, {seg(L("cmd_role"), colors.dim), seg(person.role, colors.text)})
     table.insert(out, {seg(L("cmd_sector_label"), colors.dim), seg(person.sector, colors.text)})
     table.insert(out, {seg(L("cmd_clearance"), colors.dim), seg(L("cmd_level") .. person.clearance, colors.text)})
-    table.insert(out, {seg(L("cmd_status_label"), colors.dim), seg(person.status, person.status == "ACTIVE" and colors.bright or colors.red)})
+    table.insert(out, {seg(L("cmd_status_label"), colors.dim), seg(localize_personnel_status(person.status), person.status == "ACTIVE" and colors.bright or colors.red)})
     table.insert(out, separator())
     table.insert(out, blank())
     for _, note in ipairs(person.notes) do
@@ -848,7 +873,7 @@ function handlers.INSPECT(game, args)
         seg(L("cmd_sector_prefix"), colors.dim),
         seg(sys.sector, colors.text),
         seg(L("cmd_status_prefix"), colors.dim),
-        seg(sys.status, sys.status == "NOMINAL" and colors.bright or colors.amber),
+        seg(localize_system_status(sys.status), sys.status == "NOMINAL" and colors.bright or colors.amber),
     })
     table.insert(out, separator())
     table.insert(out, blank())
@@ -1010,7 +1035,7 @@ function handlers.INBOX(game, _args)
             })
             table.insert(out, {
                 seg("        ", colors.dim),
-                seg("[" .. msg.priority .. "]", pri_color),
+                seg("[" .. localize_priority(msg.priority) .. "]", pri_color),
             })
         end
     end

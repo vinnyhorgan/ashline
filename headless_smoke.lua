@@ -250,6 +250,72 @@ local function verify_save_roundtrip()
     Save.delete(slot)
 end
 
+local function verify_language_restore_roundtrip()
+    local slot = RUNTIME_SLOT .. "_lang"
+    Save.delete(slot)
+
+    locale.setLanguage("en")
+    local data = require("data")
+    data.applyLanguage("en")
+
+    local game = Game.new()
+    game:start()
+    flush_messages(game, 4)
+
+    local ok, err = Save.save(slot, {
+        saved_at = "test",
+        app = {},
+        game = game:serialize(),
+    })
+    assert_true(ok, "language restore save should succeed: " .. tostring(err))
+
+    locale.setLanguage("it")
+    data.applyLanguage("it")
+
+    local loaded = assert(Save.load(slot))
+    local restored = Game.fromSnapshot(loaded.game)
+    assert_true(restored.inbox[1] ~= nil, "restored inbox should contain first message")
+    assert_true(restored.inbox[1].message.subject == data.messages["MSG-001"].subject, "restored inbox message should follow active language")
+
+    locale.setLanguage("en")
+    data.applyLanguage("en")
+    Save.delete(slot)
+end
+
+local function verify_final_message_trigger()
+    local game = Game.new()
+    game.phase = "main"
+
+    local flags = {
+        "doctrine_unlocked",
+        "dawn_vault_unlocked",
+        "model_generated",
+        "surface_model_generated",
+        "surface_cache_decoded",
+        "camera_looped",
+    }
+    for _, flag in ipairs(flags) do
+        game.flags[flag] = true
+    end
+
+    local records = {
+        "DIR-9104",
+        "DIR-9991",
+        "INC-7316",
+        "DIR-8700",
+        "DIR-9408",
+        "INC-6117",
+        "WIT-MIRA-001",
+    }
+    for _, record_id in ipairs(records) do
+        game.records_read[record_id] = true
+    end
+
+    game:onRecordRead("INC-7336")
+    assert_true(game.decisions_unlocked, "final decisions should unlock on final prerequisite read")
+    assert_true(game.message_timers["MSG-030"] ~= nil, "MSG-030 should queue immediately when decisions unlock")
+end
+
 local function verify_utf8_layout_regression()
     local subject = data_it.messages["MSG-001"].subject
     assert_true(subject ~= nil, "italian MSG-001 subject should exist")
@@ -307,6 +373,34 @@ local function verify_italian_release_surface()
     local boot_joined = table.concat(boot_text, "\n")
     assert_true(boot_joined:find("BIOS INTEGRATO", 1, true) ~= nil, "italian boot should localize BIOS line")
     assert_true(boot_joined:find("Sistema Operativo Terminale", 1, true) ~= nil, "italian boot should localize OS banner")
+    for _, entry in ipairs(boot_sequence) do
+        local width = 0
+        local has_box = false
+        for _, segment in ipairs(entry.segments or {}) do
+            local text = segment.text or ""
+            if text:find("|", 1, true) or text:find("+", 1, true) then
+                has_box = true
+            end
+            width = width + utf8_utils.len(text)
+        end
+        if has_box then
+            assert_true(width == 62, "boot banner lines should keep a fixed ASCII width")
+        end
+    end
+
+    local status_output = exec(game, "STATUS")
+    local status_text = flatten_output(status_output)
+    assert_true(status_text:find("ATTENZIONE", 1, true) ~= nil, "italian status should localize system status labels")
+    assert_true(status_text:find("CAUTION", 1, true) == nil, "italian status should not leak english system status labels")
+
+    exec(game, "READ INC-7301")
+    flush_messages(game, 6)
+    local inbox_text = flatten_output(exec(game, "INBOX"))
+    assert_true(inbox_text:find("PRIORITA%-1") ~= nil, "italian inbox should localize priority labels")
+
+    local final_game = build_final_state(false)
+    local actions_text = flatten_output(exec(final_game, "ACTIONS"))
+    assert_true(actions_text:find("%[FINALE%]") ~= nil, "italian actions should localize final action badge")
 
     locale.setLanguage("en")
     data.applyLanguage("en")
@@ -337,6 +431,8 @@ local function run()
     verify_ending("ACT-204", "open_broadcast", false)
     verify_ending("ACT-205", "ashline_doctrine", true)
     verify_save_roundtrip()
+    verify_language_restore_roundtrip()
+    verify_final_message_trigger()
     verify_utf8_layout_regression()
     verify_italian_release_surface()
     verify_terminal_command_surface()

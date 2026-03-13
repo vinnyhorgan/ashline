@@ -119,7 +119,7 @@ function Game.fromSnapshot(snapshot)
 
     self.phase = snapshot.phase or "main"
     self.flags = copy_map(snapshot.flags)
-    self.inbox = copy_array(snapshot.inbox)
+    self.inbox = {}
     self.records_read = copy_map(snapshot.records_read)
     self.personnel_viewed = copy_map(snapshot.personnel_viewed)
     self.searches_performed = copy_map(snapshot.searches_performed)
@@ -137,9 +137,20 @@ function Game.fromSnapshot(snapshot)
     self.decisions_unlocked = snapshot.decisions_unlocked or false
 
     self.unread_count = 0
-    for _, entry in ipairs(self.inbox) do
-        if not entry.read then
-            self.unread_count = self.unread_count + 1
+    for _, entry in ipairs(snapshot.inbox or {}) do
+        local msg = entry.id and data.messages[entry.id] or nil
+        if not msg and type(entry.message) == "table" then
+            msg = entry.message
+        end
+        if msg then
+            table.insert(self.inbox, {
+                id = entry.id,
+                message = msg,
+                read = entry.read == true,
+            })
+            if entry.read ~= true then
+                self.unread_count = self.unread_count + 1
+            end
         end
     end
 
@@ -427,6 +438,8 @@ function Game:checkTriggers(_context)
         self:queueMessage("MSG-029", 6.0)
     end
 
+    self.decisions_unlocked = compute_decisions_unlocked(self)
+
     -- Mira's message — after decisions unlocked, the last thing before you choose
     if self.decisions_unlocked
         and self.records_read["WIT-MIRA-001"]
@@ -434,7 +447,6 @@ function Game:checkTriggers(_context)
         self:queueMessage("MSG-030", 3.0)
     end
 
-    self.decisions_unlocked = compute_decisions_unlocked(self)
     self:updateDerivedState()
 end
 
@@ -640,10 +652,18 @@ function Game:getStats()
 end
 
 function Game:serialize()
+    local inbox = {}
+    for i, entry in ipairs(self.inbox) do
+        inbox[i] = {
+            id = entry.id,
+            read = entry.read == true,
+        }
+    end
+
     return {
         phase = self.phase,
         flags = copy_map(self.flags),
-        inbox = copy_array(self.inbox),
+        inbox = inbox,
         records_read = copy_map(self.records_read),
         personnel_viewed = copy_map(self.personnel_viewed),
         searches_performed = copy_map(self.searches_performed),

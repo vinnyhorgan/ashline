@@ -1,7 +1,40 @@
 local colors = require("colors")
 local locale = require("locale")
+local utf8_utils = require("utf8_utils")
 
 local boot = {}
+local INNER_WIDTH = 60
+
+local function fit_text(text, width)
+    local value = text or ""
+    local len = utf8_utils.len(value)
+    if len > width then
+        return utf8_utils.sub(value, 1, width)
+    end
+    if len < width then
+        return value .. string.rep(" ", width - len)
+    end
+    return value
+end
+
+local function boxed_line(segments)
+    local total = 0
+    for _, segment in ipairs(segments) do
+        total = total + utf8_utils.len(segment.text or "")
+    end
+    if total < INNER_WIDTH then
+        segments[#segments + 1] = {text = string.rep(" ", INNER_WIDTH - total), color = colors.border}
+    end
+
+    local line = {
+        {text = "|", color = colors.border},
+    }
+    for _, segment in ipairs(segments) do
+        line[#line + 1] = segment
+    end
+    line[#line + 1] = {text = "|", color = colors.border}
+    return line
+end
 
 function boot.getSequence()
     local L = function(k) return locale.t(k) end
@@ -26,19 +59,21 @@ function boot.getSequence()
         {delay = 0.2, segments = {{text = L("boot_node_auth"), color = colors.dim}}},
         {delay = 0.1, segments = {}},
         {delay = 0.2, segments = {{text = "+============================================================+", color = colors.border}}},
-        {delay = 0.05, segments = {{text = "|                                                            |", color = colors.border}}},
-        {delay = 0.05, segments = {
-            {text = "|    ", color = colors.border},
+        {delay = 0.05, segments = boxed_line({
+            {text = string.rep(" ", INNER_WIDTH), color = colors.border},
+        })},
+        {delay = 0.05, segments = boxed_line({
+            {text = "    ", color = colors.border},
             {text = "A S H L I N E", color = colors.bright},
-            {text = L("boot_os_name"), color = colors.border},
-            {text = "|", color = colors.border},
-        }},
-        {delay = 0.05, segments = {
-            {text = "|    ", color = colors.border},
-            {text = L("boot_site_line"), color = colors.text},
-            {text = "         |", color = colors.border},
-        }},
-        {delay = 0.05, segments = {{text = "|                                                            |", color = colors.border}}},
+            {text = fit_text(L("boot_os_name"), INNER_WIDTH - 4 - utf8_utils.len("A S H L I N E")), color = colors.border},
+        })},
+        {delay = 0.05, segments = boxed_line({
+            {text = "    ", color = colors.border},
+            {text = fit_text(L("boot_site_line"), INNER_WIDTH - 4), color = colors.text},
+        })},
+        {delay = 0.05, segments = boxed_line({
+            {text = string.rep(" ", INNER_WIDTH), color = colors.border},
+        })},
         {delay = 0.05, segments = {{text = "+============================================================+", color = colors.border}}},
         {delay = 0.2, segments = {}},
         {delay = 0.1, segments = {
