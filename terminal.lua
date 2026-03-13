@@ -94,6 +94,8 @@ function Terminal.new(font, font_bold, width, height)
     self.show_input = false
 
     self.typewriter_queue = {}
+    self.typewriter_queue_head = 1
+    self.typewriter_queue_tail = 0
     self.typewriter_speed = 1200
     self.typewriter_acc = 0
     self.typewriter_sound_interval = 4
@@ -177,7 +179,8 @@ function Terminal:addSegments(segments, instant)
         end
         self:scrollToBottom()
     else
-        table.insert(self.typewriter_queue, entry)
+        self.typewriter_queue_tail = self.typewriter_queue_tail + 1
+        self.typewriter_queue[self.typewriter_queue_tail] = entry
     end
 end
 
@@ -192,16 +195,18 @@ function Terminal:addBlank(instant)
         table.insert(self.output, {})
         self:scrollToBottom()
     else
-        table.insert(self.typewriter_queue, entry)
+        self.typewriter_queue_tail = self.typewriter_queue_tail + 1
+        self.typewriter_queue[self.typewriter_queue_tail] = entry
     end
 end
 
 function Terminal:isTyping()
-    return #self.typewriter_queue > 0
+    return self.typewriter_queue_head <= self.typewriter_queue_tail
 end
 
 function Terminal:flushTypewriter()
-    for _, raw in ipairs(self.typewriter_queue) do
+    for i = self.typewriter_queue_head, self.typewriter_queue_tail do
+        local raw = self.typewriter_queue[i]
         table.insert(self.displayed_raw, raw)
         if raw.is_blank then
             table.insert(self.output, {})
@@ -213,6 +218,8 @@ function Terminal:flushTypewriter()
         end
     end
     self.typewriter_queue = {}
+    self.typewriter_queue_head = 1
+    self.typewriter_queue_tail = 0
     self:scrollToBottom()
 end
 
@@ -220,6 +227,8 @@ function Terminal:clear()
     self.displayed_raw = {}
     self.output = {}
     self.typewriter_queue = {}
+    self.typewriter_queue_head = 1
+    self.typewriter_queue_tail = 0
     self.scroll_offset = 0
 end
 
@@ -245,11 +254,17 @@ function Terminal:update(dt)
         self.cursor_visible = not self.cursor_visible
     end
 
-    if #self.typewriter_queue > 0 then
+    if self.typewriter_queue_head <= self.typewriter_queue_tail then
         self.typewriter_acc = self.typewriter_acc + self.typewriter_speed * dt
-        while self.typewriter_acc >= 1 and #self.typewriter_queue > 0 do
+        while self.typewriter_acc >= 1 and self.typewriter_queue_head <= self.typewriter_queue_tail do
             self.typewriter_acc = self.typewriter_acc - 1
-            local raw = table.remove(self.typewriter_queue, 1)
+            local raw = self.typewriter_queue[self.typewriter_queue_head]
+            self.typewriter_queue[self.typewriter_queue_head] = nil
+            self.typewriter_queue_head = self.typewriter_queue_head + 1
+            if self.typewriter_queue_head > self.typewriter_queue_tail then
+                self.typewriter_queue_head = 1
+                self.typewriter_queue_tail = 0
+            end
             table.insert(self.displayed_raw, raw)
 
             if raw.is_blank then

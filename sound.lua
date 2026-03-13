@@ -17,6 +17,8 @@ function Sound.new()
     self.ambient_volume = 0.15
     self.tension_volume = 0.25
     self.load_queue = {}
+    self.load_queue_head = 1
+    self.load_queue_tail = 0
     self.pending_ambient_start = false
     self.loaded = false
     return self
@@ -52,7 +54,8 @@ function Sound:setMix(master, ui, ambient, tension)
 end
 
 local function queue_source(self, target, path, kind, opts)
-    table.insert(self.load_queue, {
+    self.load_queue_tail = self.load_queue_tail + 1
+    self.load_queue[self.load_queue_tail] = {
         target = target,
         path = path,
         kind = kind,
@@ -60,11 +63,11 @@ local function queue_source(self, target, path, kind, opts)
         volume = opts and opts.volume or function(sound)
             return sound.master_volume
         end,
-    })
+    }
 end
 
 function Sound:beginLoad()
-    if #self.load_queue > 0 or self.loaded then
+    if self.load_queue_head <= self.load_queue_tail or self.loaded then
         return
     end
 
@@ -125,8 +128,14 @@ end
 
 function Sound:loadBatch(count)
     local remaining = count or 1
-    while remaining > 0 and #self.load_queue > 0 do
-        local item = table.remove(self.load_queue, 1)
+    while remaining > 0 and self.load_queue_head <= self.load_queue_tail do
+        local item = self.load_queue[self.load_queue_head]
+        self.load_queue[self.load_queue_head] = nil
+        self.load_queue_head = self.load_queue_head + 1
+        if self.load_queue_head > self.load_queue_tail then
+            self.load_queue_head = 1
+            self.load_queue_tail = 0
+        end
         local src = love.audio.newSource(item.path, item.kind)
         src:setVolume(item.volume(self))
         if item.looping then
@@ -136,14 +145,14 @@ function Sound:loadBatch(count)
         remaining = remaining - 1
     end
 
-    self.loaded = #self.load_queue == 0
+    self.loaded = self.load_queue_head > self.load_queue_tail
     if self.pending_ambient_start and not self.ambient_source and #self.hums > 0 then
         self:startAmbient()
     end
 end
 
 function Sound:updateLoading()
-    if #self.load_queue == 0 then
+    if self.load_queue_head > self.load_queue_tail then
         self.loaded = true
         return
     end
@@ -153,7 +162,7 @@ end
 
 function Sound:load()
     self:beginLoad()
-    self:loadBatch(#self.load_queue > 0 and #self.load_queue or STARTUP_BATCH_SIZE)
+    self:loadBatch(STARTUP_BATCH_SIZE)
 end
 
 local function play_random(list)
