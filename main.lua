@@ -528,7 +528,8 @@ function love.load()
     terminal.offset_y = term_pad_y
 
     sound = Sound.new()
-    sound:load()
+    sound:beginLoad()
+    sound:loadBatch(5)
     terminal.on_click = function() sound:click() end
 
     menu_ui = MenuUI.new({
@@ -607,6 +608,10 @@ function love.load()
 end
 
 function love.update(dt)
+    if sound then
+        sound:updateLoading()
+    end
+
     if menu_ui then
         menu_ui:update(app_state, dt)
     end
