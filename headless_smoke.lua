@@ -296,6 +296,16 @@ local function verify_italian_release_surface()
     data.applyLanguage("en")
 end
 
+local function verify_terminal_command_surface()
+    local game = Game.new()
+    game:start()
+    flush_messages(game, 4)
+
+    assert_true(commands.applyCompletion("h", game) == "HELP", "completion should normalize lowercase input to uppercase")
+    assert_true(exec(game, "EXIT") == "EXIT", "EXIT should map to the title-menu signal")
+    assert_true(exec(game, "ESCI") == "EXIT", "ESCI alias should map to EXIT")
+end
+
 local function run()
     local game = Game.new()
     game:start()
@@ -313,6 +323,7 @@ local function run()
     verify_save_roundtrip()
     verify_utf8_layout_regression()
     verify_italian_release_surface()
+    verify_terminal_command_surface()
 
     print("headless smoke: ok")
 end

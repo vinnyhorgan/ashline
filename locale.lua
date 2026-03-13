@@ -132,6 +132,7 @@ strings.en = {
     cmd_help_authorize  = "Execute an available action",
     cmd_help_deny       = "Deny an action without executing it",
     cmd_help_clear      = "Clear the terminal screen",
+    cmd_help_exit       = "Return to the title menu",
     cmd_help_logout     = "End the session",
     cmd_help_footer     = "  Use Tab for autocomplete. Up/Down for history. Page Up/Down to scroll.",
 
@@ -466,6 +467,7 @@ strings.it = {
     cmd_help_authorize  = "Esegui un'autorizzazione disponibile",
     cmd_help_deny       = "Nega un'azione senza eseguirla",
     cmd_help_clear      = "Pulisci lo schermo del terminale",
+    cmd_help_exit       = "Torna al menu principale",
     cmd_help_logout     = "Termina la sessione",
     cmd_help_footer     = "  Usa Tab per completamento. Su/Giù per cronologia. PagSu/PagGiù per scorrere.",
 

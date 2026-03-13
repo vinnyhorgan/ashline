@@ -436,6 +436,8 @@ local function executeCommand()
     if result == "CLEAR" then
         terminal:clear()
         updateHeader()
+    elseif result == "EXIT" then
+        returnToTitle()
     elseif result == "LOGOUT" then
         terminal:addBlank()
         terminal:addSegments({{text = "  Session terminated. Goodbye, Operator.", color = colors.dim}}, true)
@@ -760,6 +762,7 @@ function love.textinput(text)
         return
     end
 
+    text = text:upper()
     input_text = utf8_sub(input_text, 1, input_cursor) .. text .. utf8_sub(input_text, input_cursor + 1)
     input_cursor = input_cursor + utf8_len(text)
     updateInput()

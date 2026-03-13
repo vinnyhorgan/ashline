@@ -16,7 +16,7 @@ end
 local COMMAND_LIST = {
     "HELP", "TASKS", "ACTIONS", "STATUS", "ALERTS", "READ", "SEARCH", "LIST",
     "PERSONNEL", "COMPARE", "INSPECT", "TRACE", "OVERRIDE", "AUTHORIZE",
-    "DENY", "INBOX", "CLEAR", "LOGOUT",
+    "DENY", "INBOX", "CLEAR", "EXIT", "LOGOUT",
 }
 
 local COMMAND_ALIASES = {
@@ -38,7 +38,7 @@ local COMMAND_ALIASES = {
     POSTA = "INBOX",
     MESSAGGI = "INBOX",
     PULISCI = "CLEAR",
-    ESCI = "LOGOUT",
+    ESCI = "EXIT",
 }
 
 local RECORD_IDS = {}
@@ -325,6 +325,7 @@ function handlers.HELP(_game, _args)
         {"AUTHORIZE <act-id>",  L("cmd_help_authorize")},
         {"DENY <act-id>",       L("cmd_help_deny")},
         {"CLEAR",               L("cmd_help_clear")},
+        {"EXIT",                L("cmd_help_exit")},
         {"LOGOUT",              L("cmd_help_logout")},
     }
 
@@ -1083,6 +1084,10 @@ function handlers.LOGOUT(_game, _args)
     return "LOGOUT"
 end
 
+function handlers.EXIT(_game, _args)
+    return "EXIT"
+end
+
 function commands.getComparisonAnalysis(id1, id2)
     local key = id1 .. ":" .. id2
     local rkey = id2 .. ":" .. id1
@@ -1524,7 +1529,7 @@ end
 function commands.applyCompletion(input, game)
     local ghost = commands.getGhostText(input, game)
     if #ghost > 0 then
-        return input .. ghost
+        return input:upper() .. ghost
     end
     return input
 end
