@@ -2178,7 +2178,7 @@ data_it.messages["MSG-022"] = {
     "i grafici saranno ancora li', solo piu' scuri.",
     "",
     "Se il Comandante Ash si presenta al tuo terminale, digli che",
-    "stavo ricalibrandothe proiezioni censuarie. E' tecnicamente vero nello",
+    "stavo ricalibrando le proiezioni censuarie. E' tecnicamente vero nello",
     "stesso modo in cui tecnicamente il cielo e' ancora lassu'.",
     "",
     "  - Jonas",
